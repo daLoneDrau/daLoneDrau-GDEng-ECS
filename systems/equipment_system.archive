@@ -1,0 +1,74 @@
+﻿@abstract class_name EquipmentSystem
+extends GameSystem
+
+signal equipment_changed(entity_id: String)
+signal modifiers_changed(entity_id: String, source: String)
+
+
+## Gets the value of the modifier on an equipment property.
+func get_equipment_item_modifier(_entity: Entity, _element_id: int) -> float:
+	push_error(self.get_name() + ".get_equipment_item_modifier() was left undefined!")
+	assert(false, self.get_name() + ".get_equipment_item_modifier() was left undefined!")
+	return 0.0
+
+
+## Gets the value of the percentage modifier on an equipment property.
+func get_equipment_item_modifier_percentage(_entity: Entity, _element_id: int) -> float:
+	push_error(self.get_name() + ".get_equipment_item_modifier_percentage() was left undefined!")
+	assert(false, self.get_name() + ".get_equipment_item_modifier_percentage() was left undefined!")
+	return 0.0
+	
+	
+## Equips an item.
+func equip_item(_entity_id: String, _item_id: String) -> void:
+	push_error(self.get_name() + ".equip_item() was left undefined!")
+	assert(false, self.get_name() + ".equip_item() was left undefined!")
+
+
+## Gets the type of weapon a user has equipped.
+func get_player_weapon_type(_entity_id: String) -> int:
+	push_error(self.get_name() + ".get_player_weapon_type() was left undefined!")
+	assert(false, self.get_name() + ".get_player_weapon_type() was left undefined!")
+	return 0
+
+
+## Determines if a player is equipped with a specific item.
+func is_player_equipped_with(_pc: Entity, _item: Entity) -> bool:
+	push_error(self.get_name() + ".is_player_equipped_with() was left undefined!")
+	assert(false, self.get_name() + ".is_player_equipped_with() was left undefined!")
+	return false
+
+
+## Recreates the player's mesh.
+func recreate_player_mesh(_entity_id: String) -> void:
+	push_error(self.get_name() + ".recreate_player_mesh() was left undefined!")
+	assert(false, self.get_name() + ".recreate_player_mesh() was left undefined!")
+
+
+## Releases Equiped Id from player.
+func release(_entity_id: String, _item_id: String) -> void:
+	push_error(self.get_name() + ".release() was left undefined!")
+	assert(false, self.get_name() + ".release() was left undefined!")
+
+
+## Releases all id equipments.
+func release_all(_entity: Entity) -> void:
+	push_error(self.get_name() + ".release_all() was left undefined!")
+	assert(false, self.get_name() + ".release_all() was left undefined!")
+
+
+## Releases Equipment Structure.
+func release_equipment_item(_item: Entity) -> void:
+	push_error(self.get_name() + ".release_equipment_item() was left undefined!")
+	assert(false, self.get_name() + ".release_equipment_item() was left undefined!")
+
+
+func unequip_all(_entity_id: String) -> void:
+	push_error(self.get_name() + ".unequip_all() was left undefined!")
+	assert(false, self.get_name() + ".unequip_all() was left undefined!")
+
+
+## Unquips an item.
+func unequip_item(_entity_id: String, _item_id: String, _is_destroyed: bool=false) -> void:
+	push_error(self.get_name() + ".unequip_item() was left undefined!")
+	assert(false, self.get_name() + ".unequip_item() was left undefined!")

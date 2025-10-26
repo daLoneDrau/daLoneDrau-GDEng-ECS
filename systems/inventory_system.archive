@@ -1,0 +1,86 @@
+﻿@abstract class_name InventorySystem
+extends GameSystem
+
+
+signal inventory_changed(entity_id: String)
+
+
+## —————————————————————————————————————————————
+#region System References. will be set in concrete implementations using Autoload instances
+## —————————————————————————————————————————————
+
+## the [EntityManager] instance
+var _entity_manager: EntityManager
+
+## the [PlayerSystem] instance
+var _player_system: PlayerSystem
+
+#endregion
+
+
+## Tries to put an item in an entity's inventory; replaces CanBePutInInventory. Typical scenarios where this method is called include:
+## * when unequipping an item
+## * trying to pick up an item from the interface
+## * placing an item in inventory from a scripted event
+func can_be_put_in_inventory(_entity_id: String, _item_id: String) -> bool:
+	push_error(self.get_name() + ".can_be_put_in_inventory() was left undefined")
+	assert(false, self.get_name() + ".can_be_put_in_inventory() was left undefined!")
+	return false
+
+
+## Cleans an entity's inventory.
+func clean_inventory(_entity_id: String) -> void:
+	push_error(self.get_name() + ".clean_inventory() was left undefined")
+	assert(false, self.get_name() + ".clean_inventory() was left undefined!")
+
+
+
+## Declares that an item is in an entity's inventory, sending scripted events to the possessor and the item.
+func declare_in_inventory(_entity: Entity, _item: Entity) -> void:
+	push_error(self.get_name() + ".declare_in_inventory() was left undefined")
+	assert(false, self.get_name() + ".declare_in_inventory() was left undefined!")
+
+
+## Determines if the inventory is empty.
+func is_empty(_entity_id: String) -> bool:
+	push_error(self.get_name() + ".is_empty() was left undefined")
+	assert(false, self.get_name() + ".is_empty() was left undefined!")
+	return false
+
+
+## Determines if an item is in an entity's inventory.
+func is_in_inventory(_entity_id: String, _item_id: String) -> bool:
+	push_error(self.get_name() + ".is_in_inventory() was left undefined!")
+	assert(false, self.get_name() + ".is_in_inventory() was left undefined!")
+	return false
+
+
+## Determines if the inventory is full.
+func is_full(_entity_id: String) -> bool:
+	push_error(self.get_name() + ".is_full() was left undefined")
+	assert(false, self.get_name() + ".is_full() was left undefined!")
+	return false
+
+
+## Tries to remove an object from an IO's inventory, ignoring any count size.
+func remove_from_inventory(_entity_id: String, _item_id: String) -> void:
+	push_error(self.get_name() + ".remove_from_inventory() was left undefined")
+	assert(false, self.get_name() + ".remove_from_inventory() was left undefined!")
+
+
+## Tries to replace an item from an entity's inventory, ignoring any count size.
+func replace_in_inventory(_entity_id: String, _item_id: String, _replacement_id: String) -> void:
+	push_error(self.get_name() + ".replace_in_inventory() was left undefined!")
+	assert(false, self.get_name() + ".replace_in_inventory() was left undefined!")
+
+
+
+## An iterator for all inventory items.
+func iter_item_ids(entity_id: String) -> Array[StringName]:
+	var out: Array[StringName] = []
+	# Fill from your internal storage; example if you have slots/stacks:
+	var inventory: InventoryComponent = _entity_manager.get_component(entity_id, InventoryComponent) as InventoryComponent
+	for slot in inventory.slots:
+		if slot.entity_id != &"":
+			out.append(slot.entity_id)
+	return out

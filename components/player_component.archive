@@ -1,0 +1,107 @@
+﻿class_name PlayerComponent
+extends EntityComponent
+
+
+signal entity_data_update(entity_id: String)
+
+
+## the player's attributes.
+var attributes: SetOfAbilities
+
+@export var damages: float
+
+## The player character's equipment. A Dictionary whose structure is [int: String]
+@export var equipped_items: Dictionary = {}
+
+## The player's gold.
+@export var gold: int:
+	get:
+		return gold
+	set(value):
+		gold = value
+		emit_update_signal()
+
+## The player's current life.
+var life: int:
+	get:
+		return life
+	set(value):
+		life = value
+		emit_update_signal()
+
+## The player's max life.
+@export var max_life: int:
+	get:
+		return max_life
+	set(value):
+		max_life = value
+		emit_update_signal()
+
+## The player's current mana.
+var mana: int:
+	get:
+		return mana
+	set(value):
+		mana = value
+		emit_update_signal()
+
+## The player's max mana.
+@export var max_mana: int:
+	get:
+		return max_mana
+	set(value):
+		max_mana = value
+		emit_update_signal()
+
+## The player's name.
+@export var name: String:
+	get:
+		return name
+	set(value):
+		name = value
+		emit_update_signal()
+
+## the PlayerComponent's flags.
+@export var player_tags: FlagSet = FlagSet.new()
+
+@export var poison: float
+
+## The player's xp.
+@export var xp: int:
+	get:
+		return xp
+	set(value):
+		xp = value
+		# if xp < 0:
+		# 	xp = 0
+		emit_update_signal()
+
+
+func _init() -> void:
+	Switchboard_auto.add_resource_broadcaster(
+		self,
+		"entity_data_update",
+		Switchboard_auto.SubscriptionStrategy.UNLIMITED
+	)
+	attributes = SetOfAbilities.new()
+	attributes.parent = self
+
+
+## Emits a signal that the [PlayerComponent] was updated.
+func emit_update_signal() -> void:
+	entity_data_update.emit(parent_entity_id)
+
+
+## Gets an ability's score.
+func get_ability_score(ability: int) -> AbilityScore:
+	return attributes.value(ability)
+
+
+## Determines if the [SetOfAbilities] contains a specific ability.
+func has_ability_score(ability: int) -> bool:
+	return attributes.has_ability_score(ability)
+
+
+## Sets the base score for a specific ability.
+func set_ability_score(ability: int, base_score: int) -> void:
+	attributes.set_ability_score(ability, base_score)
