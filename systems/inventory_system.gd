@@ -745,7 +745,7 @@ func _compute_available(inv_from, item_id: StringName) -> int:
 func _get_item_max_stack(item_id: StringName) -> int:
 	var total: int = 99
 	var item := _get_item_component(item_id)
-	if item == null:
+	if item != null:
 		total = item.max_stack
 	return total
 

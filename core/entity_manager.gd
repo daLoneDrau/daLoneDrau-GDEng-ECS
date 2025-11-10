@@ -110,18 +110,6 @@ func get_entities_by_tag(tag: int) -> Array[Entity]:
 	return entities_by_tag
 
 
-## Determines if an [Entity] is tagged as an PC.
-@abstract func is_pc(_e: Entity) -> bool
-
-
-## Determines if an [Entity] is tagged as an item.
-@abstract func is_item(_e: Entity) -> bool
-
-
-## Determines if an [Entity] is tagged as unique.
-@abstract func is_unique(_e: Entity) -> bool
-
-
 ## Determines if two entities represent the same item.
 func is_same_entity(entity_0: Entity, entity_1: Entity) -> bool:
 	# if either of the entities is NULL, return false
@@ -146,7 +134,6 @@ func is_same_entity(entity_0: Entity, entity_1: Entity) -> bool:
 	return false
 
 
-
 ## Validates that an entity exists in the system.
 func is_valid_entity(id: String) -> bool:
 	return entities.has(id)
@@ -158,11 +145,6 @@ func kill_all_entities() -> void:
 		entities[id].alive = false
 
 
-
-@abstract func kill_spells_on(_e_id: String)
-
-
-
 func remove_entity(id: String) -> void:
 	entities.erase(id)
 
@@ -170,6 +152,25 @@ func remove_entity(id: String) -> void:
 func remove_all_entities() -> void:
 	for id: String in entities:
 		entities.erase(id)
+
+## —————————————————————————————————————————————
+#region API
+## —————————————————————————————————————————————
+
+
+## Determines if an [Entity] is tagged as an PC.
+@abstract func is_pc(_e: Entity) -> bool
+
+
+## Determines if an [Entity] is tagged as an item.
+@abstract func is_item(_e: Entity) -> bool
+
+
+## Determines if an [Entity] is tagged as unique.
+@abstract func is_unique(_e: Entity) -> bool
+
+
+@abstract func kill_spells_on(_e_id: String)
 
 
 ## Unequips an item from a player's inventory.
@@ -198,9 +199,12 @@ func remove_all_entities() -> void:
 #		GlobalUtils.SM_INIT
 #	)
 
+#endregion
+
 
 func update() -> void:
 	for entity in entities_to_add:
+		print("addint entity ", entity.id)
 		entities[entity.id] = entity
 		# emit the start event
 		if is_pc(entity) or is_item(entity):
@@ -224,6 +228,31 @@ func update() -> void:
 ## —————————————————————————————————————————————
 
 
+## Assigns an [EntityComponent] to an entity with the matching reference id. This should be used for existing entities only.
+## To add components to new entities, write the code in the creation methods.
+func add_component(eid: StringName, comp: EntityComponent) -> void:
+	# --- Safety checks ---
+	if is_valid_entity(eid):
+		push_error("EntityManager.add_component: entity %s not found." % eid)
+		return
+
+	if comp == null:
+		push_error("EntityManager.add_component: null component for %s" % eid)
+		return
+
+	var cname := comp.get_class()
+	var entity: Entity = get_entity_by_id(eid)
+
+	# --- Replace existing component if necessary ---
+	if entity.has_component(cname):
+		push_warning("Entity %s already has component %s. Replacing." % [eid, cname])
+
+	entity.set_component(comp)
+	# --- Lifecycle hook (optional) ---
+	if comp.has_method("_on_added_to_entity"):
+		comp._on_added_to_entity(eid)
+
+
 ## Gets an [EntityComponent] assigned to an [Entity].
 func get_component(id: String, script: Script) -> EntityComponent:
 	var ret_val: EntityComponent = null
@@ -233,5 +262,61 @@ func get_component(id: String, script: Script) -> EntityComponent:
 			ret_val = entity.get_component(script.get_global_name())
 
 	return ret_val
+
+## Returns all component instances attached to the given entity.
+func get_components(entity_id: StringName) -> Array:
+	if not entities.has(entity_id):
+		return []
+	var entry: Entity = entities[entity_id]
+	return entry.get_components().values()
 	
 #endregion
+
+
+func to_dict() -> Dictionary:
+	var out := {"entities": []}
+	# Fallback path using common ECS helpers; adapt if your API differs
+
+	for eid in entities:
+		var e_dict := {"id": str(eid), "components": {}}
+		# pull component list
+		var comps: Array = get_components(eid)
+		for c in comps:
+			var cname = c.get_class() if c.has_method("get_class") else c.get_script().resource_path.get_file()
+			var payload = c.to_dict() if c and c.has_method("to_dict") else {}
+			e_dict["components"][cname] = payload
+		out["entities"].append(e_dict)
+	return out
+
+func from_dict(snapshot: Dictionary) -> bool:
+	# Fallback rebuild: clear and re-create entities
+	remove_all_entities()
+
+	var ents: Array = snapshot.get("entities", [])
+	for ed in ents:
+		var eid: StringName = StringName(ed.get("id", ""))
+		if eid == &"":
+			eid = StringName("E" + str(ents.hash()))
+		var new_id := eid
+		#TODO - create logic to load entities from dictionary
+		# if em.has_method("create_entity_with_id"):
+	#			new_id = em.create_entity_with_id(eid)
+	#		elif em.has_method("create_entity"):
+	#			new_id = em.create_entity(eid)
+	#
+	#		# Reattach components
+	#		var comps: Dictionary = ed.get("components", {})
+	#		for cname in comps.keys():
+	#			var payload: Dictionary = comps[cname]
+	#			# Resolve script by name or keep a registry map here if you have one.
+	#			var script_path := _resolve_component_script_path(cname)
+	#			if script_path == "":
+	#				push_warning("Unknown component '%s' during load; skipped" % cname)
+	#				continue
+	#			var comp = load(script_path).new()
+	#			if comp.has_method("from_dict"):
+	#				comp.from_dict(payload)
+	#			if em.has_method("add_component"):
+	#				em.add_component(new_id, comp)
+
+	return true

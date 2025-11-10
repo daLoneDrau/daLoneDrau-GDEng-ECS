@@ -8,8 +8,8 @@ signal destroyed(entity_id)
 signal activity_changed(is_active: bool)
 signal alive_changed(is_alive: bool)
 
-## the set of component's assigned to the [Entity].
-@export var components: Dictionary[StringName, EntityComponent] = {}
+## the set of [EntityComponent]s assigned to the [Entity].
+@export var _components: Dictionary[StringName, EntityComponent] = {}
 
 ## the [Entity]'s Id.
 @export var id: String
@@ -73,7 +73,7 @@ func _init():
 
 
 func _get(clazz_name: StringName) -> EntityComponent:
-	return components[clazz_name]
+	return _components[clazz_name]
 
 
 ## Destroys an [Entity].
@@ -82,30 +82,35 @@ func destroy() -> void:
 		alive = false
 		
 		# detach components (lets GC reclaim them if no other refs)
-		for k in components.keys():
-			var c: EntityComponent = components[k]
+		for k in _components.keys():
+			var c: EntityComponent = _components[k]
 			if c:
 				c.parent_entity_id = ""
 
-		components.clear()
+		_components.clear()
 		destroyed.emit(id)
 
 
 ## Gets an [EntityComponent] attached to an [Entity].
 func get_component(clazz_name: StringName) -> EntityComponent:
-	return components[clazz_name]
+	return _components[clazz_name]
+
+
+## Gets all [EntityComponent]s attached to an [Entity].
+func get_components() -> Dictionary:
+	return _components
 
 
 ## Determines if an [Entity] has a specific component type.
 func has_component(clazz: StringName) -> bool:
-	return clazz in components
+	return clazz in _components
 
 
 ## Removes an [EntityComponent] from an [Entity].
 func remove_component(key: StringName) -> void:
-	if components.has(key):
-		var prev: EntityComponent = components[key]
-		components.erase(key)
+	if _components.has(key):
+		var prev: EntityComponent = _components[key]
+		_components.erase(key)
 		if prev:
 			prev.parent_entity_id = ""  # or null it out
 		component_removed.emit(key, prev)
@@ -115,13 +120,13 @@ func remove_component(key: StringName) -> void:
 func set_component(component: EntityComponent) -> void:
 	assert(component != null)
 	var key: StringName = component.get_class_name()  # ensure your components implement this
-	var existed: bool = components.has(key)
+	var existed: bool =   _components.has(key)
 	if existed:
-		var _old: EntityComponent = components[key]  # maybe do something w/this eventually
-		components[key] = component
+		var _old: EntityComponent = _components[key]  # maybe do something w/this eventually
+		_components[key] = component
 		component.parent_entity_id = id
 		component_added.emit(key, component)  # treat replace as add for simplicity
 	else:
-		components[key] = component
+		_components[key] = component
 		component.parent_entity_id = id
 		component_added.emit(key, component)

@@ -30,7 +30,6 @@ func on_removed(_entity: Entity, _em: EntityManager) -> void:
 ## Adds an ability score.
 func add(ability: int, initial_score: int = 0) -> void:
 	var score := AbilityScore.new(self)
-	score.parent = self
 	score.base = initial_score
 	ability_set[ability] = score
 	emit_update_signal()

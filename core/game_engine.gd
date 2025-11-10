@@ -45,6 +45,9 @@ var scene_stack: Array[Dictionary] = []
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	print("GameEngine._ready()")
+
+	# set it so game engine keeps processing while scene tree is paused
+	self.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	running = true
 
 
@@ -60,9 +63,7 @@ func _process(delta: float) -> void:
 		if entity_manager and entity_manager.has_method("update"):
 			entity_manager.update()
 
-		# Count gameplay frames (skip if paused/menus as needed)
-		if not get_tree().paused:
-			frames_processed += 1
+		frames_processed += 1
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -144,7 +145,7 @@ func change_scene(scene_name:String, scene_path: String="") -> void:
 		return
 
 	current_scene = scene_name
-	print("change scene to ", scenes[current_scene]["path"])
+	print("GameEngine.change_scene() -\n\tchange scene to ", scenes[current_scene]["path"])
 
 	# Inject engine reference if scene supports it
 	var node := get_tree().current_scene
@@ -272,6 +273,9 @@ func push_modal_scene(
 	var prev_paused := get_tree().paused
 	get_tree().paused = true
 
+	# tell last scene in stack to ignore mouse events
+	get_tree().current_scene.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 	# Ensure the overlay runs while paused
 	overlay.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 
@@ -286,11 +290,10 @@ func push_modal_scene(
 
 	# If it's a Control, ensure it captures input & focus
 	if is_instance_of(overlay, Control):
-		pass
 		#TODO - fix this casting
 		# var c: Control = overlay as Control
-		# c.mouse_filter = Control.MOUSE_FILTER_STOP
-		# c.focus_mode = Control.FOCUS_ALL
+		overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+		overlay.focus_mode = Control.FOCUS_ALL
 		
 		# Optional: center or full-rect if your modal scene isn't already laid out
 		# c.set_anchors_preset(Control.PRESET_CENTER) # or PRESET_FULL_RECT as needed
@@ -331,6 +334,9 @@ func pop_scene() -> void:
 
 	if pause_tree:
 		get_tree().paused = prev_paused
+
+	# tell last scene in stack it can handle mouse events again
+	get_tree().current_scene.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	scene_popped.emit(key)
 
@@ -389,4 +395,3 @@ func close_all_overlays() -> void:
 		pop_scene()
 	
 #endregion
-

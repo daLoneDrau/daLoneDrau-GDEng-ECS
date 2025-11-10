@@ -1,5 +1,5 @@
 class_name ScriptVariableSet
-extends CustomResource
+extends EntityComponent
 
 
 ## the set of variables.

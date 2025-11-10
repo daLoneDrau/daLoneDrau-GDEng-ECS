@@ -13,7 +13,7 @@ extends RefCounted
 # Context injected on attach
 var entity_id: StringName
 var entity_manager
-var vars                            # ScriptVariableSet if present
+var vars: ScriptVariableSet
 var parent_component: ScriptComponent = null
 var is_master: bool = false
 
@@ -66,12 +66,13 @@ func handle_event(event_type: int, ctx: Dictionary) -> Dictionary:
 
 func get_var(key: String, default_value = null):
 	if vars:
-		return vars.get_value(key, default_value)
+		if vars.has(key):
+			return vars.get_variable(key).value
 	return default_value
 
 func set_var(key: String, value) -> void:
 	if vars:
-		vars.set_value(key, value)
+		vars.set_variable(key, value)
 
 func bump_var(key: String, delta: int, default_value := 0) -> int:
 	var v = int(get_var(key, default_value)) + delta
