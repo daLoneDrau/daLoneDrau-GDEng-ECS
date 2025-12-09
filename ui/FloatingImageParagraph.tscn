@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3 uid="uid://crytwgi2btkjk"]
+
+[ext_resource type="Script" uid="uid://bfc3pe10hrgo8" path="res://Godot-4_5-ECS/ui/floating_image_paragraph.gd" id="1_7pevf"]
+
+[node name="FloatingImageParagraph" type="VBoxContainer" node_paths=PackedStringArray("text_top", "text_bottom", "left_image", "right_image", "top_row")]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_7pevf")
+text_top = NodePath("TopRow/TextTop")
+text_bottom = NodePath("TextBottom")
+left_image = NodePath("TopRow/ImgLeft")
+right_image = NodePath("TopRow/ImgRight")
+top_row = NodePath("TopRow")
+
+[node name="TopRow" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="ImgLeft" type="TextureRect" parent="TopRow"]
+layout_mode = 2
+
+[node name="TextTop" type="RichTextLabel" parent="TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ImgRight" type="TextureRect" parent="TopRow"]
+layout_mode = 2
+
+[node name="TextBottom" type="RichTextLabel" parent="."]
+layout_mode = 2
+fit_content = true

@@ -4,6 +4,7 @@ extends Node
 signal entity_added(e: Entity)
 signal entity_removed(eid: String, e: Entity)
 signal entity_destroyed(eid: String, e: Entity)
+signal script_event(ctx: Dictionary)
 
 
 var ascii_letters_and_digits: String = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -31,6 +32,11 @@ func _ready() -> void:
 		"entity_destroyed",
 		Switchboard_auto.SubscriptionStrategy.UNLIMITED
 	)
+	Switchboard_auto.add_node_broadcaster(
+		self,
+		"script_event",
+		Switchboard_auto.SubscriptionStrategy.UNLIMITED
+	)
 
 
 func gen_unique_string(length: int) -> String:
@@ -47,7 +53,6 @@ func uuidv4() -> String:
 
 func add_entity(e: Entity) -> void:
 	entities_to_add.append(e)
-	entity_added.emit(e)
 
 
 ## Adds an entity immediately instead of waiting for the update.
@@ -56,11 +61,12 @@ func add_entity_immediately(eid: String) -> void:
 		if entities_to_add[i].id == eid:
 			var entity: Entity = entities_to_add[i]
 			entities[entity.id] = entity
-			entity_added.emit(entity)
-
-			# emit the start event
-			if is_pc(entity) or is_item(entity):
-				send_init_script_event(entity)
+			entity_added.emit(eid)
+			script_event.emit({
+				"source_id": eid,
+				"event_type": ScriptEvent.INITIALIZED,
+			})
+			
 			entities_to_add.remove_at(i)
 			break
 
@@ -108,6 +114,24 @@ func get_entities_by_tag(tag: int) -> Array[Entity]:
 		if entities[id].tags.has(tag):
 			entities_by_tag.append(entities[id])
 	return entities_by_tag
+	
+	
+## Gets all entities that have a specific componenent type.
+func get_entities_with_component(component_name: String) -> Array[Entity]:
+	var entities_with_component: Array[Entity] = []
+	for id in entities:
+		if entities[id].has_component(component_name):
+			entities_with_component.append(entities[id])
+	return entities_with_component
+	
+	
+## Determines if a specific [Entity] has a component.
+func has_component(eid: String, component_name: String) -> bool:
+	var has := false
+	var e := get_entity_by_id(eid)
+	if e != null:
+		has = e.has_component(component_name)
+	return has
 
 
 ## Determines if two entities represent the same item.
@@ -204,11 +228,12 @@ func remove_all_entities() -> void:
 
 func update() -> void:
 	for entity in entities_to_add:
-		print("addint entity ", entity.id)
 		entities[entity.id] = entity
-		# emit the start event
-		if is_pc(entity) or is_item(entity):
-			send_init_script_event(entity)
+		entity_added.emit(entity.id)
+		script_event.emit({
+			"source_id": entity.id,
+			"event_type": ScriptEvent.INITIALIZED,
+		})
 	entities_to_add.clear()
 
 	var kill_list: Array[String] = []
@@ -297,7 +322,7 @@ func from_dict(snapshot: Dictionary) -> bool:
 		var eid: StringName = StringName(ed.get("id", ""))
 		if eid == &"":
 			eid = StringName("E" + str(ents.hash()))
-		var new_id := eid
+		var _new_id := eid
 		#TODO - create logic to load entities from dictionary
 		# if em.has_method("create_entity_with_id"):
 	#			new_id = em.create_entity_with_id(eid)

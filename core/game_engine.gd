@@ -47,7 +47,7 @@ func _ready() -> void:
 	print("GameEngine._ready()")
 
 	# set it so game engine keeps processing while scene tree is paused
-	self.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	self.process_mode = Node.PROCESS_MODE_ALWAYS
 	running = true
 
 
@@ -159,6 +159,7 @@ func _instantiate_scene(path: String) -> Scene:
 	if packed == null:
 		push_error("GameEngine: failed to load scene at %s" % path)
 		return null
+	print("Instantiated")
 	var node: Scene = packed.instantiate() as Scene
 	if node and node.has_method("set_engine"):
 		node.set_engine(self)
@@ -266,12 +267,14 @@ func push_modal_scene(
 	# Instantiate the modal overlay
 	var path: String = scenes[scene_name]["path"]
 	var overlay: Scene = _instantiate_scene(path)
+	print("instantiating\n", path,"\n",overlay)
 	if overlay == null:
 		return null
 
 	# Pause tree while modal is active
 	var prev_paused := get_tree().paused
 	get_tree().paused = true
+	print("pausing")
 
 	# tell last scene in stack to ignore mouse events
 	get_tree().current_scene.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -280,13 +283,19 @@ func push_modal_scene(
 	overlay.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 
 	# Make a blocking, full-rect scrim behind the overlay (captures clicks)
+	print("make blocker")
 	var blocker := _make_modal_blocker(with_scrim, scrim_color)
-	add_child(blocker)
-	add_child(overlay)
-
-	# Keep Z order: blocker just below overlay
-	move_child(blocker, get_child_count() - 2)
-	move_child(overlay, get_child_count() - 1)
+	if get_tree().current_scene.has_node("Overlays"):
+		var overlay_node = get_tree().current_scene.get_node_or_null("Overlays")
+		overlay_node.add_child(blocker)
+		overlay_node.add_child(overlay)
+	else:
+		add_child(blocker)
+		add_child(overlay)
+	
+		# Keep Z order: blocker just below overlay
+		move_child(blocker, get_child_count() - 2)
+		move_child(overlay, get_child_count() - 1)
 
 	# If it's a Control, ensure it captures input & focus
 	if is_instance_of(overlay, Control):

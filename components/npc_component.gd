@@ -2,8 +2,6 @@ class_name NpcComponent
 extends EntityComponent
 
 
-signal entity_data_update(entity_id: String)
-
 ## The npc's current life.
 var life: int:
 	get:
@@ -34,6 +32,14 @@ var mana: int:
 		return max_mana
 	set(value):
 		max_mana = value
+		emit_update_signal()
+
+## The npc's name.
+var name: StringName:
+	get:
+		return name
+	set(value):
+		name = value
 		emit_update_signal()
 
 ## The npc's weapon.

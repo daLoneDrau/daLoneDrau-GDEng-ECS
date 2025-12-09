@@ -28,7 +28,7 @@ extends EntityComponent
 @export var profession: int = 0                              # Profession.Enum
 @export var alignment: int = 0                               # Alignment.Enum
 @export var order_affiliation: int = 0                       # Order.Enum
-@export var portrait_id: String = ""                         # UI portrait key or resource path
+@export var portrait_id: int = -1                            # UI portrait key or resource path
 @export var player_tags: int = 0                             # FlagSet of PlayerTags.Tag
 
 ## —————————————————————————————————————————————

@@ -12,25 +12,23 @@ extends RefCounted
 
 # Context injected on attach
 var entity_id: StringName
-var entity_manager
 var vars: ScriptVariableSet
 var parent_component: ScriptComponent = null
 var is_master: bool = false
 
 # Internal caches
 var _event_method: Dictionary = {}  # {event_id: "method_name"}
-var _subscriptions: Array[int] = []
+var _subscriptions: Array = []
 
 ## —————————————————————————————————————————————
 #region Lifecycle
 ## —————————————————————————————————————————————
 
 
-func on_attach(_entity_id: StringName, _em) -> void:
+func on_attach(_entity_id: StringName, entity_manager: EntityManager) -> void:
 	entity_id = _entity_id
-	entity_manager = _em
 	if entity_manager and entity_manager.has_component(entity_id, "ScriptVariableSet"):
-		vars = entity_manager.get_component(entity_id, "ScriptVariableSet")
+		vars = entity_manager.get_component(entity_id, ScriptVariableSet)
 	_build_event_method_map()
 	_build_subscriptions()
 
@@ -45,7 +43,7 @@ func on_detach() -> void:
 ## —————————————————————————————————————————————
 
 
-func subscribed_events() -> Array[int]:
+func subscribed_events() -> Array:
 	return _subscriptions
 
 func manual_subscriptions() -> Array[int]:
@@ -79,14 +77,6 @@ func bump_var(key: String, delta: int, default_value := 0) -> int:
 	set_var(key, v)
 	return v
 
-func has_comp(id: StringName, comp: StringName) -> bool:
-	return entity_manager and entity_manager.has_component(id, comp)
-
-func get_comp(id: StringName, comp: StringName):
-	if entity_manager:
-		return entity_manager.get_component(id, comp)
-	return null
-
 func get_parent_component() -> ScriptComponent:
 	return parent_component
 
@@ -114,11 +104,11 @@ func _build_event_method_map() -> void:
 
 
 func _build_subscriptions() -> void:
-	var auto: Array[int] = _event_method.keys()
+	var auto: Array = _event_method.keys()
 	var extra: Array[int] = manual_subscriptions()
-	var set := {}
-	for ev in auto: set[ev] = true
-	for ev in extra: set[ev] = true
-	_subscriptions = set.keys()
+	var subscription_set := {}
+	for ev in auto: subscription_set[ev] = true
+	for ev in extra: subscription_set[ev] = true
+	_subscriptions = subscription_set.keys()
 	
 #endregion

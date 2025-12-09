@@ -17,8 +17,8 @@ var master_script: EntityScript      # optional overlay
 var _instances: Array = []           # [EntityScript]
 var _subscriptions: Array[int] = []  # merged event IDs
 
-func get_script_chain() -> Array[Script]:
-	var chain: Array[Script] = []
+func get_script_chain() -> Array[EntityScript]:
+	var chain: Array[EntityScript] = []
 	if master_first:
 		if master_script: chain.append(master_script)
 		if main_script: chain.append(main_script)

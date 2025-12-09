@@ -11,6 +11,9 @@ var ended: bool = false
 
 var paused: bool = false
 
+# Systems owned by this scene
+var _systems := {}
+
 
 func _process(_delta: float) -> void:
 	# common per-frame hooks (optional)
@@ -56,32 +59,15 @@ func register_action(input: String, action: String) -> void:
 ## —————————————————————————————————————————————
 
 
-## Gets the assigned combat system.
-@abstract func get_combat_system() -> CombatSystem
+## Gets a registered [GameSystem].
+func get_registered_system(sys: StringName) -> GameSystem:
+	return _systems.get(sys, null)
 
 
-## Gets the assigned damage system.
-@abstract func get_damage_system() -> DamageSystem
-
-
-## Gets the assigned equipment system.
-@abstract func get_equipment_system() -> EquipmentSystem
-
-
-## Gets the assigned inventory system.
-@abstract func get_inventory_system() -> InventorySystem
-
-
-## Gets the assigned scripting system.
-@abstract func get_scripting_system() -> ScriptingSystem
-
-
-## Gets the assigned spell system.
-@abstract func get_spell_system() -> SpellSystem
-
-
-## Gets the assigned player system.
-@abstract func get_player_system() -> PlayerSystem
+## Registers a [GameSystem].
+func register_system(sys: GameSystem) -> void:
+	print("registering system ", sys.get_script().get_global_name())
+	_systems[sys.get_script().get_global_name()] = sys
 
 #endregion
 
@@ -100,14 +86,6 @@ func hide_children() -> void:
 func simulation(_cycles: int) -> void:
 	# optional override for fixed-step sims/batch updates
 	pass
-
-
-## Adds local signals to broadcast.
-@abstract func broadcast_signals() -> void
-
-
-## Connects local canvas elements' signals.
-@abstract func listen_for_broadcasts() -> void
 
 
 ## Takes a screenshot.
