@@ -43,9 +43,6 @@ var _entity_manager: EntityManager
 ## the [PlayerSystem] instance
 var _player_system: PlayerSystem
 
-## the [ScriptSystem] instance
-var _script_system: ScriptSystem
-
 #endregion
 
 ## —————————————————————————————————————————————

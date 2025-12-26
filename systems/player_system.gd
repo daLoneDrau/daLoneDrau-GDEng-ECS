@@ -8,11 +8,11 @@ extends GameSystem
 
 signal stats_changed(entity_id: String)
 signal resources_changed(entity_id: String)
-signal effects_changed(entity_id: String)
-signal cooldowns_changed(entity_id: String)
-signal equipment_changed(entity_id: String)
-signal inventory_changed(entity_id: String)
-signal quest_flag_changed(entity_id: String, key: String)
+# signal effects_changed(entity_id: String)
+# signal cooldowns_changed(entity_id: String)
+# signal equipment_changed(entity_id: String)
+# signal inventory_changed(entity_id: String)
+# signal quest_flag_changed(entity_id: String, key: String)
 signal death_state_changed(entity_id: String, is_dead: bool)
 
 #endregion

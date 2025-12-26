@@ -66,7 +66,7 @@ func get_registered_system(sys: StringName) -> GameSystem:
 
 ## Registers a [GameSystem].
 func register_system(sys: GameSystem) -> void:
-	print("registering system ", sys.get_script().get_global_name())
+	# print("registering system ", sys.get_script().get_global_name())
 	_systems[sys.get_script().get_global_name()] = sys
 
 #endregion

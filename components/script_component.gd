@@ -14,8 +14,8 @@ var master_script: EntityScript      # optional overlay
 @export var role_hint: String = ""
 
 ## Runtime caches (populated by ScriptSystem)
-var _instances: Array = []           # [EntityScript]
-var _subscriptions: Array[int] = []  # merged event IDs
+# var _instances: Array = []           # [EntityScript]
+# var _subscriptions: Array[int] = []  # merged event IDs
 
 func get_script_chain() -> Array[EntityScript]:
 	var chain: Array[EntityScript] = []

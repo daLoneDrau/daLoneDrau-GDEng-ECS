@@ -125,7 +125,7 @@ func refresh_entity(entity_id: StringName) -> void:
 
 ## Generic script_event dispatcher (multi-target).
 func _on_script_event(payload: Dictionary) -> void:
-	print("ScriptSystem._on_script_event(", payload)
+	print("ScriptSystem._on_script_event(\n", payload)
 	var ev_type := int(payload.get("event_type", ScriptEvent.NONE))
 	var source_id: StringName = payload.get("source_id", StringName())
 	if ev_type == ScriptEvent.NONE or source_id == StringName():
@@ -153,6 +153,12 @@ func _resolve_targets(payload: Dictionary, source_id: StringName) -> Array[Strin
 	var ret_list: Array[StringName] = []
 	# dictionary used to identify target already added to return list
 	var seen := {}
+
+	if payload.has("target_id"):
+		var id: StringName = payload["target_id"] if (payload["target_id"] is StringName) else StringName(payload["target_id"])
+		if id != StringName() and not seen.has(id):
+			seen[id] = true
+			ret_list.append(id)
 
 	if payload.has("targets"):
 		for eid in payload["targets"]:

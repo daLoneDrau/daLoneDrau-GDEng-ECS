@@ -20,13 +20,14 @@ const NONE:              int = 0
 const DIED:              int = 1
 const ITEM_USED:         int = 2
 const ENTITY_COMBINED:   int = 3
-const INITIALIZED:       int = 4   # formerly SPAWNED
+const INITIALIZED:       int = 4
 const INTERACTED:        int = 5
 const DAMAGED:           int = 6
 const HEALED:            int = 7
 const MOVED:             int = 8
 const TURN_STARTED:      int = 9
 const TURN_ENDED:        int = 10
+const HIT_PLAYER:        int = 11
 #endregion
 
 ## —————————————————————————————————————————————

@@ -36,7 +36,7 @@ signal item_removed(entity_id: StringName, slot: int, item_id: StringName, count
 signal item_moved(from_entity: StringName, from_slot: int, to_entity: StringName, to_slot: int, count: int)
 signal stack_split(entity_id: StringName, from_slot: int, to_slot: int, count: int)
 signal stack_merged(entity_id: StringName, source_slot: int, target_slot: int, total_count: int)
-signal transfer_failed(context: Dictionary)
+# signal transfer_failed(context: Dictionary)
 
 #endregion
 
