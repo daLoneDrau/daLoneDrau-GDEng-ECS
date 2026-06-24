@@ -1,4 +1,5 @@
-class_name Switchboard extends Node
+class_name Switchboard
+extends Node
 
 
 enum SubscriptionStrategy {PARENT_ONLY, UNLIMITED}
