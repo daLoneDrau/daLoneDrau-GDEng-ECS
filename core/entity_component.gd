@@ -10,6 +10,8 @@ signal entity_data_update(entity_id: String, component: String)
 ## Quick toggle without removing the component.
 @export var enabled: bool = true
 
+var _lifecycle_initialized: bool = false
+
 ## the CoreEngine instance to use
 var engine_instance: GameEngine
 

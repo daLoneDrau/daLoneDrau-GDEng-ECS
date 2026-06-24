@@ -448,11 +448,11 @@ func tick_periodic(delta: float) -> Array[Dictionary]:
 			active.tick_count += 1
 
 			var tick_data := {
-								 "effect_id": effect_id,
-								 "stacks": active.stacks,
-								 "tick_count": active.tick_count,
-								 "params": active.params
-							 }
+				"effect_id": effect_id,
+				"stacks": active.stacks,
+				"tick_count": active.tick_count,
+				"params": active.params
+			}
 
 			tick_results.append(tick_data)
 			effect_ticked.emit(parent_entity_id, effect_id, tick_data)
