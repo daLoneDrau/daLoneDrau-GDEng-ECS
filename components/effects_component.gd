@@ -573,4 +573,4 @@ func get_summary() -> Array[Dictionary]:
 
 	return result
 
-	#endregion
+#endregion

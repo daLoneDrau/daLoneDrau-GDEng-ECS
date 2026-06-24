@@ -1,115 +1,394 @@
-class_name DiceTower extends Node
+class_name DiceTower
+extends Node
 
+## Dice Tower - Advanced dice rolling utility (Autoload Singleton)
+##
+## Supports expressions like:
+##   "3d6"         - Roll 3 six-sided dice
+##   "2d4+1"       - Roll 2d4 and add 1
+##   "3d6+2d4+5"   - Multiple dice groups with modifier
+##   "4d6kh3"      - Roll 4d6, keep highest 3
+##   "4d6dl1"      - Roll 4d6, drop lowest 1
+##   "2d20kl1"     - Roll 2d20, keep lowest 1 (disadvantage)AC
+##   "2d20kh1"     - Roll 2d20, keep highest 1 (advantage)
+##   "d20"         - Single die (1d20)
+##   "3d6!"        - Exploding dice (reroll and add on max)
+##   "1d10!>=9"    - Exploding on 9 or higher
+##   "3d6r1"       - Reroll 1s once
+##   "(2d6+1)+d4"  - Parenthetical expressions
+##
+## Usage:
+##   var result = DiceTower.roll_result("3d6+2")
+##   print(result.total)
+##   print(result.get_breakdown())
+##
+##   var total = DiceTower.roll("2d6+3")  # Quick integer result
 
-## the singleton instance
-static var instance: DiceTower
+signal dice_rolled(result: DiceResult)
 
+## Random number generator (use exclusively for consistent seeding)
 static var _rng := RandomNumberGenerator.new()
 
+
+## Set a fixed seed for reproducible rolls (useful for testing)
 static func seed(v: int = 0) -> void:
 	_rng.seed = v
 
-static func randomize() -> void:
+
+## Randomize the RNG (call to reset to non-deterministic)
+static func randomize_seed() -> void:
 	_rng.randomize()
 
-# Called when the node enters the scene tree for the first time.
+
+## Get current RNG state (for save/load)
+static func get_rng_state() -> int:
+	return _rng.state
+
+
+## Set RNG state (for save/load)
+static func set_rng_state(state: int) -> void:
+	_rng.state = state
+
+
 func _ready() -> void:
-	instance = self
 	# Ensure RNG is randomized if no explicit seed was set
 	if _rng.seed == 0:
 		_rng.randomize()
 
 
-# ────────────────────────────────────────────────────────────────────────────
-# Internal: expression evaluation
-# Grammar (simplified):
-#   EXPR := TERM (('+'|'-') TERM)*
-#   TERM := FACTOR | '(' EXPR ')'
-#   FACTOR := DICE | NUMBER
-#   DICE := [N]? 'd' S [EXPLODE] [KEEPDROP]
-#   EXPLODE := '!' [CMP]
-#   CMP := '>=T' | '>T' | '=T'
-#   KEEPDROP := ('kh'|'kl'|'dh'|'dl') N
-# Examples:
-#   4d6kh3, 4d6dl1, 1d10!>=9, d8!, 2d6+3, (2d6+1)+d4
-# ────────────────────────────────────────────────────────────────────────────
-
-func _eval(expr: String) -> Dictionary:
-	var parser: ExpressionParser = ExpressionParser.new(self, expr)
-	return parser.parse()
+## —————————————————————————————————————————————
+#region Public API - Core Rolling
+## —————————————————————————————————————————————
 
 
-## Quick helpers for d20 advantage.
-func adv(mod: int = 0) -> int:
-	var a: Array[int] = roll_dice(2, 20)
-	var keep = max(a[0], a[1])
-	return keep + mod
+## Roll and return a structured DiceResult object
+func roll_result(expr: String) -> DiceResult:
+	var parser := ExpressionParser.new(self, expr)
+	var result := parser.parse_to_result()
+	dice_rolled.emit(result)
+	return result
 
 
-## Quick helpers for d20 disadvantage.
-func dis(mod: int = 0) -> int:
-	var a: Array[int] = roll_dice(2, 20)
-	var keep = min(a[0], a[1])
-	return keep + mod
-
-func get_random_from_dictionary(dict: Dictionary) -> Variant:
-	return dict.values()[randi() % dict.size()]
-
-
-func get_random_from_list(list: Array) -> Variant:
-	return list[randi() % list.size()]
-
-
-## Roll and return an integer total. Raises push_error on parse issues.
+## Roll and return an integer total (backward compatible)
 func roll(expr: String) -> int:
-	var result: Dictionary = _eval(expr)
-	return int(result["total"])
+	return roll_result(expr).total
 
 
-## Roll and also return a human-readable breakdown (for tooltips/logs).
-## Returns: {"total": int, "breakdown": String}
+## Roll and return a dictionary with total and breakdown (backward compatible)
 func roll_breakdown(expr: String) -> Dictionary:
-	return _eval(expr)
+	var result := roll_result(expr)
+	return {
+		"total": result.total,
+		"breakdown": result.breakdown,
+		"text": result.breakdown  # Legacy key
+	}
 
-# Core rollers
+
+## Roll against a target number, returns DiceResult with success flag
+func roll_check(expr: String, target: int) -> DiceResult:
+	var result := roll_result(expr)
+	result.target = target
+	result.success = result.total >= target
+	return result
+
+
+## Roll against a target where lower is better (e.g., roll-under systems)
+func roll_check_under(expr: String, target: int) -> DiceResult:
+	var result := roll_result(expr)
+	result.target = target
+	result.success = result.total <= target
+	return result
+
+#endregion
+
+## —————————————————————————————————————————————
+#region Public API - D20 Helpers
+## —————————————————————————————————————————————
+
+
+## Roll with advantage (2d20, keep highest) + modifier
+func adv(mod: int = 0) -> int:
+	var expr := "2d20kh1" + _format_modifier(mod)
+	return roll(expr)
+
+
+## Roll with advantage, return full result
+func adv_result(mod: int = 0) -> DiceResult:
+	var expr := "2d20kh1" + _format_modifier(mod)
+	return roll_result(expr)
+
+
+## Roll with disadvantage (2d20, keep lowest) + modifier
+func dis(mod: int = 0) -> int:
+	var expr := "2d20kl1" + _format_modifier(mod)
+	return roll(expr)
+
+
+## Roll with disadvantage, return full result
+func dis_result(mod: int = 0) -> DiceResult:
+	var expr := "2d20kl1" + _format_modifier(mod)
+	return roll_result(expr)
+
+
+## Standard D&D ability score roll (4d6, drop lowest)
+func roll_ability_score() -> DiceResult:
+	return roll_result("4d6dl1")
+
+#endregion
+
+## —————————————————————————————————————————————
+#region Public API - Fighting Fantasy Helpers
+## —————————————————————————————————————————————
+
+
+## Roll initial SKILL (1d6 + 6)
+func roll_skill() -> DiceResult:
+	return roll_result("1d6+6")
+
+
+## Roll initial STAMINA (2d6 + 12)
+func roll_stamina() -> DiceResult:
+	return roll_result("2d6+12")
+
+
+## Roll initial LUCK (1d6 + 6)
+func roll_luck() -> DiceResult:
+	return roll_result("1d6+6")
+
+
+## Test your Luck - roll 2d6, succeed if <= current luck
+func test_luck(current_luck: int) -> DiceResult:
+	var result := roll_result("2d6")
+	result.target = current_luck
+	result.success = result.total <= current_luck
+	return result
+
+
+## Attack roll (2d6 + skill) for Attack Strength calculation
+func roll_attack(skill: int) -> DiceResult:
+	return roll_result("2d6+%d" % skill)
+
+
+## Combat round - returns attacker and defender Attack Strengths
+func roll_combat(attacker_skill: int, defender_skill: int) -> Dictionary:
+	var attacker := roll_attack(attacker_skill)
+	var defender := roll_attack(defender_skill)
+
+	var winner: String = "tie"
+	if attacker.total > defender.total:
+		winner = "attacker"
+	elif defender.total > attacker.total:
+		winner = "defender"
+
+	return {
+		"attacker": attacker,
+		"defender": defender,
+		"winner": winner
+	}
+
+#endregion
+
+## —————————————————————————————————————————————
+#region Public API - Simple Die Rollers
+## —————————————————————————————————————————————
+
+
+## Roll a single die with N sides
+func roll_die(sides: int) -> int:
+	return _roll_single(sides)
+
+
+## Rolls an x-sided die (alias for roll_die)
+func roll_dx(faces: int) -> int:
+	return _roll_single(faces)
+
+
+## Rolls an x-sided die plus a modifier
+func roll_dx_plus_y(faces: int, modifier: int) -> int:
+	return _roll_single(faces) + modifier
+
+
+## Roll multiple dice of the same type, return array
 func roll_dice(n: int, sides: int) -> Array:
 	var arr: Array = []
 	for i in n:
-		arr.append(_rng.randi_range(1, max(1, sides)))
+		arr.append(_roll_single(sides))
 	return arr
 
 
-## Rolls an x-sided die.
-func roll_dx(faces: int) -> int:
-	return randi() % faces + 1
-
-
-## Rolls an x-sided die plus a modifier.
-func roll_dx_plus_y(faces: int, modifier: int) -> int:
-	return randi() % faces + 1 + modifier
-
-
-## Rolls an x-sided die, y number of times
+## Rolls x dice of y sides and returns the sum
 func roll_x_dy(rolls: int, faces: int) -> int:
 	var sum: int = 0
 	for x in range(rolls):
-		sum += roll_dx(faces)
+		sum += _roll_single(faces)
 	return sum
 
 
+## Roll a percentile (1-100)
+func roll_percentile() -> int:
+	return _roll_single(100)
+
+
+## Coin flip (returns true for heads/high)
+func flip_coin() -> bool:
+	return _roll_single(2) == 2
+
+#endregion
+
+## —————————————————————————————————————————————
+#region Public API - Random Selection
+## —————————————————————————————————————————————
+
+
+## Get a random value from a dictionary
+func get_random_from_dictionary(dict: Dictionary) -> Variant:
+	if dict.is_empty():
+		return null
+	var keys := dict.keys()
+	return dict[keys[_rng.randi() % keys.size()]]
+
+
+## Get a random element from an array
+func get_random_from_list(list: Array) -> Variant:
+	if list.is_empty():
+		return null
+	return list[_rng.randi() % list.size()]
+
+
+## Pick N random items from an array (no duplicates)
+func pick_random(array: Array, count: int = 1) -> Array:
+	if array.is_empty():
+		return []
+
+	var available := array.duplicate()
+	var picked: Array = []
+	var to_pick := mini(count, available.size())
+
+	for i in to_pick:
+		var index := _rng.randi() % available.size()
+		picked.append(available[index])
+		available.remove_at(index)
+
+	return picked
+
+
+## Weighted choice from dictionary: {"option_key": {"weight": N, ...}, ...}
 func weighted_choice(options: Dictionary) -> String:
+	if options.is_empty():
+		return ""
+
 	var total: int = 0
 	for k in options.keys():
-		total += int(options[k]["weight"])
-	var die_roll         = randi() % total
+		var weight_val = options[k]
+		if weight_val is Dictionary:
+			total += int(weight_val.get("weight", 1))
+		else:
+			total += int(weight_val)
+
+	if total <= 0:
+		return options.keys()[0]
+
+	var die_roll := _rng.randi() % total
 	var running: int = 0
+
 	for k in options.keys():
-		running += int(options[k]["weight"])
+		var weight_val = options[k]
+		if weight_val is Dictionary:
+			running += int(weight_val.get("weight", 1))
+		else:
+			running += int(weight_val)
 		if die_roll < running:
 			return k
-	return options.keys()[0]  # fallback
+
+	return options.keys()[0]
 
 
+## Weighted choice from simple dictionary: {"option": weight, ...}
+func weighted_choice_simple(options: Dictionary) -> Variant:
+	if options.is_empty():
+		return null
+
+	var total: float = 0.0
+	for weight in options.values():
+		total += float(weight)
+
+	if total <= 0:
+		return options.keys()[0]
+
+	var roll_value: float = _rng.randf() * total
+	var cumulative: float = 0.0
+
+	for option in options:
+		cumulative += float(options[option])
+		if roll_value <= cumulative:
+			return option
+
+	return options.keys()[0]
+
+
+## Shuffle an array in place and return it
+func shuffle(array: Array) -> Array:
+	# Fisher-Yates shuffle using our RNG
+	for i in range(array.size() - 1, 0, -1):
+		var j := _rng.randi() % (i + 1)
+		var temp = array[i]
+		array[i] = array[j]
+		array[j] = temp
+	return array
+
+#endregion
+
+## —————————————————————————————————————————————
+#region Internal Helpers
+## —————————————————————————————————————————————
+
+
+## Single die roll using consistent RNG
+func _roll_single(sides: int) -> int:
+	if sides <= 0:
+		push_warning("DiceTower: Invalid die sides: %d" % sides)
+		return 0
+	return _rng.randi_range(1, sides)
+
+
+func _format_modifier(mod: int) -> String:
+	if mod == 0:
+		return ""
+	elif mod > 0:
+		return "+%d" % mod
+	else:
+		return "%d" % mod
+
+#endregion
+
+## —————————————————————————————————————————————
+#region Debug
+## —————————————————————————————————————————————
+
+
+func print_roll_debug(expression: String) -> void:
+	var result := roll_result(expression)
+	print("=== DiceTower Debug ===")
+	print("  Expression: %s" % expression)
+	print("  Breakdown: %s" % result.breakdown)
+	print("  Rolls: %s" % result.rolls)
+	if not result.dropped.is_empty():
+		print("  Dropped: %s" % result.dropped)
+	if not result.kept.is_empty():
+		print("  Kept: %s" % result.kept)
+	if not result.explosions.is_empty():
+		print("  Explosions: %s" % result.explosions)
+	if not result.rerolled.is_empty():
+		print("  Rerolled: %s" % result.rerolled)
+	print("  Modifier: %d" % result.modifier)
+	print("  Total: %d" % result.total)
+
+#endregion
+
+
+## —————————————————————————————————————————————
+## Expression Parser (Inner Class)
+## —————————————————————————————————————————————
 class ExpressionParser:
 	var tower: DiceTower
 	var expr: String
@@ -117,31 +396,48 @@ class ExpressionParser:
 	var pos: int
 	var _debug: bool = false
 
+	# Accumulate data for DiceResult
+	var _result: DiceResult
+
 	func _init(_tower: DiceTower, _expr: String):
 		tower = _tower
 		expr = _expr
 
-	func parse() -> Dictionary:
+
+	func parse_to_result() -> DiceResult:
+		_result = DiceResult.new(expr)
+
 		if _debug:
 			print("\tparse expression\n", expr)
-		s = expr.strip_edges().replace(" ", "")
+
+		s = expr.strip_edges().replace(" ", "").to_lower()
 		pos = 0
 
+		if s.is_empty():
+			_result.breakdown = "(empty)"
+			return _result
+
 		var out: Dictionary = parse_expr()
-		# leftover characters?
+
+		# Leftover characters warning
 		if pos < s.length():
 			push_warning("Unparsed trailing input at %d in '%s'" % [pos, expr])
 
+		_result.total = int(out.get("total", 0))
+		_result.breakdown = out.get("text", str(_result.total))
+
 		if _debug:
 			print("\tparsed expression\n", out)
-		return out
+
+		return _result
+
 
 	## Peeks at the next character in the string.
 	func peek() -> String:
 		return "" if pos >= s.length() else s[pos]
 
 
-	## Gets the next character in the expression and moves the position up by 1.
+	## Gets the next character and advances position.
 	func consume() -> String:
 		if pos >= s.length():
 			return ""
@@ -150,7 +446,7 @@ class ExpressionParser:
 		return ch
 
 
-	## Gets a number from the expression and moves the position up by to the end of the number.
+	## Parses an integer from current position.
 	func parse_number() -> int:
 		var start: int = pos
 		while pos < s.length() and s[pos].is_valid_int():
@@ -161,12 +457,11 @@ class ExpressionParser:
 		return int(s.substr(start, pos - start))
 
 
-	## Parses a comparison expression, such as >=5, or =27 and returns it as a dictionary with two keys: "operation" (=, >, >=) and "threshold".
+	## Parses a comparison expression: >=5, >5, =5
 	func parse_cmp() -> Dictionary:
-		# returns {"op": String, "t": int} or {}
 		if pos >= s.length():
 			return {}
-		# operators we support: >=, >, =
+
 		var op: String = ""
 		if pos + 1 < s.length() and s.substr(pos, 2) == ">=":
 			op = ">="
@@ -179,12 +474,14 @@ class ExpressionParser:
 			pos += 1
 		else:
 			return {}
+
 		var t: int = parse_number()
 		return {"operation": op, "threshold": t}
 
-	## Checks to see if a comparison passes.
+
+	## Checks if a value passes a comparison for explosion.
 	func cmp_pass(val: int, cmp: Dictionary, sides: int) -> bool:
-		var passes: bool = val == sides  # default explode on max
+		var passes: bool = val == sides  # Default: explode on max
 		if not cmp.is_empty():
 			match cmp["operation"]:
 				">=":
@@ -197,361 +494,331 @@ class ExpressionParser:
 					passes = false
 		return passes
 
+
+	## Main expression parser - handles +, -, * chains
 	func parse_expr() -> Dictionary:
-		var ret_val: Dictionary = {}
-		# Splits the string into parts — numbers, operators, and dice terms.
-		# Builds a tree or linear representation of operations.
 		var parts: Array = []
+
 		while pos < s.length():
 			if _debug:
 				print("\tpos", pos)
+
 			var term: Dictionary = parse_term()
+
 			if _debug:
 				print("\tterm", term)
 
-			# was this a term?
 			if term.size() > 0:
 				parts.append(term)
 			else:
-				# not a term
 				var op: String = peek()
-				if op == "+" or op == "-" or op == "*":
-					# reading an operation. save the operation type and keep processing
-					if op == "+":
-						consume()
-						parts.append({
-							"type": "operation",
-							"mode": "add"
-						})
-					elif op == "-":
-						consume()
-						parts.append({
-							"type": "operation",
-							"mode": "subtract"
-						})
-					elif op == "*":
-						consume()
-						parts.append({
-							"type": "operation",
-							"mode": "multiply"
-						})
+				if op in ["+", "-", "*"]:
+					consume()
+					var mode: String = ""
+					match op:
+						"+": mode = "add"
+						"-": mode = "subtract"
+						"*": mode = "multiply"
+					parts.append({"type": "operation", "mode": mode})
+				elif op == "(":
+					consume()
+					parts.append(parse_expr())
+				elif op == ")":
+					consume()
+					break
 				else:
-					if op == "(" or op == ")":
-						# reading an expression
-						consume()
-						if op == "(":
-							# starting a new expression. call the parser again
-							parts.append(parse_expr())
-						else:
-							# ended an inner expression. get out of the loop and return
-							break
+					break
+
+		# Evaluate the parts chain
+		return _evaluate_parts(parts)
+
+
+	## Evaluates a chain of parts with operations
+	func _evaluate_parts(parts: Array) -> Dictionary:
+		if parts.is_empty():
+			return {"total": 0, "text": "0"}
 
 		if parts.size() == 1:
-			ret_val = parts[0]
-		elif parts.size() == 3:
-			ret_val = {
-				"type": "",
-				"terms": []
-			}
-			for part in parts:
-				if part["type"] == "operation":
-					ret_val["type"] = part["mode"]
-				else:
-					ret_val["terms"].append(part)
+			return parts[0]
 
-			if ret_val["type"] == "add":
-				ret_val["total"] = ret_val["terms"][0]["total"] + ret_val["terms"][1]["total"]
-			elif ret_val["type"] == "subtract":
-				ret_val["total"] = ret_val["terms"][0]["total"] - ret_val["terms"][1]["total"]
-			elif ret_val["type"] == "multiply":
-				ret_val["total"] = ret_val["terms"][0]["total"] * ret_val["terms"][1]["total"]
+		# Process left-to-right (no operator precedence for simplicity)
+		var result: Dictionary = parts[0]
+		var result_text: String = result.get("text", str(result.get("total", 0)))
+		var i: int = 1
 
-		return ret_val
+		while i < parts.size() - 1:
+			var op: Dictionary = parts[i]
+			var right: Dictionary = parts[i + 1]
+			var right_total: int = int(right.get("total", 0))
+			var right_text: String = right.get("text", str(right_total))
+
+			var op_symbol: String = "+"
+			match op.get("mode", ""):
+				"add":
+					result["total"] = int(result["total"]) + right_total
+					op_symbol = "+"
+				"subtract":
+					result["total"] = int(result["total"]) - right_total
+					op_symbol = "-"
+				"multiply":
+					result["total"] = int(result["total"]) * right_total
+					op_symbol = "*"
+
+			result_text = "%s %s %s" % [result_text, op_symbol, right_text]
+			i += 2
+
+		result["text"] = result_text + " = " + str(result["total"])
+		return result
 
 
-	## FACTOR | '(' EXPR ')'
+	## Parse a term (factor or grouped expression)
 	func parse_term() -> Dictionary:
-		var term: Dictionary = {}
-		# a term is a factor or an expression.
-		# a factor is a number, or a die-value
 		var factors: Array = []
-		var factor: Dictionary = parse_factor_2()
+		var factor: Dictionary = parse_factor()
+
 		while factor.size() > 0:
-			# add the last factor
 			factors.append(factor)
 
-			# get the next one
-			factor = parse_factor_2()
+			# Check if next char could start another factor
+			if peek() in ["d", "("] or (peek().is_valid_int() and _looks_like_dice()):
+				factor = parse_factor()
+			else:
+				break
 
-		if _debug:
-			print("\tfactors\n", factor)
+		if factors.is_empty():
+			return {}
 
-		# build the factors into a term
+		# Build term from factors
+		return _build_term_from_factors(factors)
+
+
+	## Check if current position looks like start of dice expression
+	func _looks_like_dice() -> bool:
+		var save := pos
+		while pos < s.length() and s[pos].is_valid_int():
+			pos += 1
+		var has_d := pos < s.length() and s[pos] == "d"
+		pos = save
+		return has_d
+
+
+	## Build a term from parsed factors
+	func _build_term_from_factors(factors: Array) -> Dictionary:
 		if factors.size() == 1:
-			if factors[0]["type"] == "dice":
-				term = {
-					"type": "dice",
-					"count": 1,
-					"sides": factors[0]["sides"],
-					"explode": factors[0]["explode"],
-				}
-				if "keep" in factors[0]:
-					term["keep"] = factors[0]["keep"]
-				if "drop" in factors[0]:
-					term["drop"] = factors[0]["drop"]
-				roll_dice_term(term)
-			elif factors[0]["type"] == "const":
-				term = factors[0]
-				term["total"] = term["value"]
-		elif factors.size() == 2:
-			if factors[0]["type"] == "const" and factors[1]["type"] == "dice":
-				term = {
-					"type": "dice",
-					"count": factors[0]["value"],
-					"sides": factors[1]["sides"],
-					"explode": factors[1]["explode"],
-				}
-				if "keep" in factors[1]:
-					term["keep"] = factors[1]["keep"]
-				if "drop" in factors[1]:
-					term["drop"] = factors[1]["drop"]
-				roll_dice_term(term)
-
-		return term
-
-	func parse_factor_2() -> Dictionary:
-		var ret_val: Dictionary[Variant, Variant] = {}
-
-		# space
-		if pos < s.length() and s[pos] == " ":
-			consume()
-
-		# number
-		if pos < s.length() and s[pos].is_valid_int():
-			ret_val = {"type": "const", "value": parse_number()}
-
-		# dice
-		if ret_val.size() == 0 and pos < s.length() and s[pos].to_lower() == "d":
-			consume()
-
-			# if expression is empty after the 'd', return an error
-			if pos >= s.length() or not s[pos].is_valid_int():
-				push_error("Expected sides after 'd' at %d in '%s'" % [pos, expr])
-				ret_val = {"total": 0, "text": "d?"}
-
-			# no error, keep processing
-			if ret_val.size() == 0:
-				ret_val = {
-					"type": "dice",
-					"sides": parse_number(),
-				}
-				ret_val["explode"] = {
-					"enabled": false,
-					"comparison": {
-						"operation": "=",
-						"threshold": ret_val["sides"]
-					}
-				}
-				# explode?
-				if peek() == "!":
-					ret_val["explode"]["enabled"] = true
-					consume()
-					var cmp_dict: Dictionary = parse_cmp()
-					if cmp_dict.size() > 0:
-						ret_val["explode"]["comparison"] = cmp_dict
-
-				# keep/drop?
-				var kd_n: int = 0
-				if pos + 1 <= s.length() - 1:
-					var two = s.substr(pos, 2).to_lower()
-					if two in ["kh","kl","dh","dl"]:
-						pos += 2
-						kd_n = parse_number()
-						match two:
-							"kh":
-								ret_val["keep"] = {
-									"mode": "highest",
-									"number": kd_n
-								}
-							"kl":
-								ret_val["keep"] = {
-									"mode": "lowest",
-									"number": kd_n
-								}
-							"dh":
-								ret_val["drop"] = {
-									"mode": "highest",
-									"number": kd_n
-								}
-							"dl":
-								ret_val["drop"] = {
-									"mode": "lowest",
-									"number": kd_n
-								}
-
-		return ret_val
-
-
-	## Explodes a roll, returning an array containing all exploded rolls.
-	func explode_rolls(rolled_value: int, sides: int, comparison: Dictionary) -> Array:
-		var ret_val: Array = []
-		if cmp_pass(rolled_value, comparison, sides):
-			ret_val = tower.roll_dice(1, sides)
-			ret_val += explode_rolls(ret_val[0], sides, comparison)
-
-		return ret_val
-
-
-	func roll_dice_term(term: Dictionary):
-		term["rolls"] = tower.roll_dice(term["count"], term["sides"])
-
-		# make a deep copy of the rolls array
-		term["adjusted_rolls"] = term["rolls"].duplicate(true)
-		if term["explode"]["enabled"]:
-			var explosions: Array = []
-			for rolled_value in term["adjusted_rolls"]:
-				explosions += explode_rolls(
-					rolled_value,
-					term["sides"],
-					term["explode"]["comparison"]
-				)
-			term["adjusted_rolls"] += explosions
-		if "keep" in term or "drop" in term:
-			# sort array from lowest to highest - [10, 5, 2.5, 8] becomes [2.5, 5, 8, 10]
-			term["adjusted_rolls"].sort()
-			if "keep" in term:
-				var drop_number: int = term["adjusted_rolls"].size() - term["keep"]["number"]
-				match term["keep"]["mode"]:
-					"highest":
-						for i in range(drop_number):
-							# drop the lowest values from the front of the array
-							term["adjusted_rolls"].pop_front()
-					"lowest":
-						for i in range(drop_number):
-							# drop the highest values from the front of the array
-							term["adjusted_rolls"].pop_back()
+			var f: Dictionary = factors[0]
+			if f.get("type") == "dice":
+				return _roll_dice_term(1, f)
+			elif f.get("type") == "const":
+				# Track modifier in result
+				_result.modifier += f["value"]
+				return {"total": f["value"], "text": str(f["value"]), "type": "const"}
 			else:
-				var drop_number: int = term["drop"]["number"]
-				match term["drop"]["mode"]:
-					"highest":
-						for i in range(drop_number):
-							# drop the highest values from the front of the array
-							term["adjusted_rolls"].pop_back()
-					"lowest":
-						for i in range(drop_number):
-							# drop the lowest values from the front of the array
-							term["adjusted_rolls"].pop_front()
+				return f
+
+		if factors.size() == 2:
+			if factors[0].get("type") == "const" and factors[1].get("type") == "dice":
+				return _roll_dice_term(factors[0]["value"], factors[1])
+
+		# Fallback: sum all factors
 		var total: int = 0
-		for i in range(term["adjusted_rolls"].size()):
-			total += term["adjusted_rolls"][i]
-		term["total"] = total
+		var texts: Array = []
+		for f in factors:
+			total += int(f.get("total", f.get("value", 0)))
+			texts.append(f.get("text", str(f.get("value", 0))))
+		return {"total": total, "text": " ".join(texts)}
 
+
+	## Parse a single factor (number, dice, or parenthetical)
 	func parse_factor() -> Dictionary:
-		# number
-		if pos < s.length() and s[pos].is_valid_int():
-			var n: int = parse_number()
-			return {"type": "const", "value": n}
+		# Skip whitespace
+		while peek() == " ":
+			consume()
 
-		# parentheses
+		# Parenthetical expression
 		if peek() == "(":
-			consume() # '('
+			consume()
 			var inner: Dictionary = parse_expr()
-			if peek() != ")":
-				push_error("Expected ')' at %d in '%s'" % [pos, expr])
-			else:
+			if peek() == ")":
 				consume()
+			else:
+				push_error("Expected ')' at %d in '%s'" % [pos, expr])
 			return inner
 
-		# dice: [N]? 'd' S [! [cmp]] [ (kh|kl|dh|dl) N ]
-		# Examples: d6, 2d6, 4d6kh3, 1d10!>=9
-		var save: int = pos
-		var count: int = 1
-		# optional leading number
-		if pos < s.length() and s[pos].is_valid_int():
-			count = parse_number()
+		# Number
+		if peek().is_valid_int():
+			var n: int = parse_number()
+			# Check if followed by 'd' (dice notation)
+			if peek() == "d":
+				# This is the count for dice, return as const to be combined
+				return {"type": "const", "value": n}
+			else:
+				return {"type": "const", "value": n, "total": n, "text": str(n)}
 
-		if peek().to_lower() != "d":
-			# not dice; rewind if we consumed a number incorrectly
-			pos = save
-			push_error("Expected 'd' for dice at %d in '%s'" % [pos, expr])
-			return {"total": 0, "text": "?"}
-		consume() # 'd'
-		if pos >= s.length() or not s[pos].is_valid_int():
-			push_error("Expected sides after 'd' at %d in '%s'" % [pos, expr])
-			return {"total": 0, "text": "d?"}
-		var sides: int = parse_number()
-		if sides <= 0:
-			push_error("Dice sides must be > 0")
-			sides = 1
-
-		# explode?
-		var explode: bool = false
-		var cmp: Dictionary = {}
-		if peek() == "!":
-			explode = true
+		# Dice: [N]d[S][!][cmp][kh/kl/dh/dl N][rN]
+		if peek() == "d":
 			consume()
-			cmp = parse_cmp()
 
-		# keep/drop?
-		var kd: String = "" # "kh"|"kl"|"dh"|"dl"
-		var kd_n: int = 0
-		if pos + 1 <= s.length() - 1:
-			var two = s.substr(pos, 2).to_lower()
-			if two in ["kh","kl","dh","dl"]:
-				kd = two
-				pos += 2
-				kd_n = parse_number()
+			if pos >= s.length() or not s[pos].is_valid_int():
+				push_error("Expected sides after 'd' at %d in '%s'" % [pos, expr])
+				return {"total": 0, "text": "d?"}
 
-		# Roll dice
+			var sides: int = parse_number()
+
+			var dice_info: Dictionary = {
+											"type": "dice",
+											"sides": sides,
+											"explode": {"enabled": false, "comparison": {"operation": "=", "threshold": sides}},
+										}
+
+			# Explode modifier: !
+			if peek() == "!":
+				dice_info["explode"]["enabled"] = true
+				consume()
+				var cmp_dict: Dictionary = parse_cmp()
+				if not cmp_dict.is_empty():
+					dice_info["explode"]["comparison"] = cmp_dict
+
+			# Keep/drop modifier: kh, kl, dh, dl
+			if pos + 1 < s.length():
+				var two := s.substr(pos, 2)
+				if two in ["kh", "kl", "dh", "dl"]:
+					pos += 2
+					var kd_n: int = parse_number()
+					match two:
+						"kh":
+							dice_info["keep"] = {"mode": "highest", "number": kd_n}
+						"kl":
+							dice_info["keep"] = {"mode": "lowest", "number": kd_n}
+						"dh":
+							dice_info["drop"] = {"mode": "highest", "number": kd_n}
+						"dl":
+							dice_info["drop"] = {"mode": "lowest", "number": kd_n}
+
+			# Reroll modifier: rN
+			if peek() == "r":
+				consume()
+				dice_info["reroll"] = parse_number()
+
+			return dice_info
+
+		return {}
+
+
+	## Roll dice and build result
+	func _roll_dice_term(count: int, dice_info: Dictionary) -> Dictionary:
+		var sides: int = dice_info["sides"]
+		var die_key: String = "d%d" % sides
+
+		# Initial rolls
 		var rolls: Array = tower.roll_dice(count, sides)
-		var _all_rolls: Array = rolls.duplicate()
+		var original_rolls: Array = rolls.duplicate()
 
-		# exploding logic
-		if explode:
-			var i: int = 0
-			while i < rolls.size():
-				var v: int = rolls[i]
-				if cmp_pass(v, cmp, sides):
-					var extra = tower._rng.randi_range(1, sides)
-					rolls.append(extra)
-				# keep checking the newly added result
-				i += 1
+		# Handle rerolls (rN = reroll Ns once)
+		var rerolled_values: Array = []
+		if "reroll" in dice_info:
+			var reroll_val: int = dice_info["reroll"]
+			for i in range(rolls.size()):
+				if rolls[i] == reroll_val:
+					rerolled_values.append(rolls[i])
+					rolls[i] = tower._roll_single(sides)
 
-		var kept: Array = rolls.duplicate()
-		# apply keep/drop
-		if kd != "":
-			kept.sort() # ascending
-			match kd:
-				"kh":
-					# keep highest N
-					kept = kept.slice(max(0, kept.size() - kd_n), kept.size())
-				"kl":
-					# keep lowest N
-					kept = kept.slice(0, min(kd_n, kept.size()))
-				"dh":
-					# drop highest N
-					kept = kept.slice(0, max(0, kept.size() - kd_n))
-				"dl":
-					# drop lowest N
-					kept = kept.slice(min(kd_n, kept.size()), kept.size())
+		# Store rerolled info
+		if not rerolled_values.is_empty():
+			if not _result.rerolled.has(die_key):
+				_result.rerolled[die_key] = []
+			_result.rerolled[die_key].append_array(rerolled_values)
 
-		var subtotal: int = 0
-		for v in kept:
-			subtotal += int(v)
+		# Handle explosions
+		var explosion_rolls: Array = []
+		if dice_info["explode"]["enabled"]:
+			var cmp: Dictionary = dice_info["explode"]["comparison"]
+			for roll_val in rolls:
+				explosion_rolls.append_array(_explode_roll(roll_val, sides, cmp))
 
-		# build text breakdown
+		# Combine rolls with explosions for keep/drop calculations
+		var all_rolls: Array = rolls + explosion_rolls
+
+		# Store explosion info
+		if not explosion_rolls.is_empty():
+			if not _result.explosions.has(die_key):
+				_result.explosions[die_key] = []
+			_result.explosions[die_key].append_array(explosion_rolls)
+
+		# Handle keep/drop
+		var kept_rolls: Array = all_rolls.duplicate()
+		var dropped_rolls: Array = []
+
+		if "keep" in dice_info or "drop" in dice_info:
+			kept_rolls.sort()
+
+			if "keep" in dice_info:
+				var keep_n: int = dice_info["keep"]["number"]
+				match dice_info["keep"]["mode"]:
+					"highest":
+						dropped_rolls = kept_rolls.slice(0, max(0, kept_rolls.size() - keep_n))
+						kept_rolls = kept_rolls.slice(max(0, kept_rolls.size() - keep_n))
+					"lowest":
+						dropped_rolls = kept_rolls.slice(min(keep_n, kept_rolls.size()))
+						kept_rolls = kept_rolls.slice(0, min(keep_n, kept_rolls.size()))
+			elif "drop" in dice_info:
+				var drop_n: int = dice_info["drop"]["number"]
+				match dice_info["drop"]["mode"]:
+					"highest":
+						dropped_rolls = kept_rolls.slice(max(0, kept_rolls.size() - drop_n))
+						kept_rolls = kept_rolls.slice(0, max(0, kept_rolls.size() - drop_n))
+					"lowest":
+						dropped_rolls = kept_rolls.slice(0, min(drop_n, kept_rolls.size()))
+						kept_rolls = kept_rolls.slice(min(drop_n, kept_rolls.size()))
+
+		# Store in result
+		if not _result.rolls.has(die_key):
+			_result.rolls[die_key] = []
+		_result.rolls[die_key].append_array(all_rolls)
+
+		if not dropped_rolls.is_empty():
+			if not _result.dropped.has(die_key):
+				_result.dropped[die_key] = []
+			_result.dropped[die_key].append_array(dropped_rolls)
+
+		if dropped_rolls.size() > 0:
+			if not _result.kept.has(die_key):
+				_result.kept[die_key] = []
+			_result.kept[die_key].append_array(kept_rolls)
+
+		# Calculate total
+		var total: int = 0
+		for v in kept_rolls:
+			total += int(v)
+
+		# Build text breakdown
 		var txt: String = "%dd%d" % [count, sides]
-		if explode:
+		if dice_info["explode"]["enabled"]:
 			txt += "!"
-			if not cmp.is_empty():
+			var cmp: Dictionary = dice_info["explode"]["comparison"]
+			if cmp.get("threshold", sides) != sides or cmp.get("operation", "=") != "=":
 				txt += "%s%d" % [cmp["operation"], int(cmp["threshold"])]
-		if kd != "":
-			txt += "%s%d" % [kd, kd_n]
-		txt += " → [" + ", ".join(rolls) + "]"
-		if kd != "":
-			txt += " keep [" + ", ".join(kept) + "]"
-		txt += " = " + str(subtotal)
+		if "keep" in dice_info:
+			txt += "%s%d" % ["kh" if dice_info["keep"]["mode"] == "highest" else "kl", dice_info["keep"]["number"]]
+		if "drop" in dice_info:
+			txt += "%s%d" % ["dh" if dice_info["drop"]["mode"] == "highest" else "dl", dice_info["drop"]["number"]]
+		if "reroll" in dice_info:
+			txt += "r%d" % dice_info["reroll"]
 
-		return {"total": subtotal, "text": txt}
+		txt += " → [" + ", ".join(all_rolls.map(func(x): return str(x))) + "]"
 
-		# ────────────────────────────────────────────────────────────────────────────
+		if not dropped_rolls.is_empty():
+			txt += " keep [" + ", ".join(kept_rolls.map(func(x): return str(x))) + "]"
+
+		txt += " = " + str(total)
+
+		return {"total": total, "text": txt, "type": "dice"}
+
+
+	## Recursively explode a die roll
+	func _explode_roll(rolled_value: int, sides: int, comparison: Dictionary) -> Array:
+		var explosions: Array = []
+		if cmp_pass(rolled_value, comparison, sides):
+			var new_roll: int = tower._roll_single(sides)
+			explosions.append(new_roll)
+			explosions.append_array(_explode_roll(new_roll, sides, comparison))
+		return explosions

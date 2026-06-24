@@ -1,4 +1,5 @@
-class_name RenderingSystem extends GameSystem
+@abstract class_name RenderingSystem
+extends GameSystem
 
 
 ## the canves where rendering takes place

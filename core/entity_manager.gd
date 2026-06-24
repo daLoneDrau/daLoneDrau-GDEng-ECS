@@ -61,12 +61,16 @@ func add_entity_immediately(eid: String) -> void:
 		if entities_to_add[i].id == eid:
 			var entity: Entity = entities_to_add[i]
 			entities[entity.id] = entity
-			entity_added.emit(eid)
+
+			# Call lifecycle hooks on all components
+			_notify_components_added(entity)
+
+			entity_added.emit(entity)
 			script_event.emit({
 				"source_id": eid,
 				"event_type": ScriptEvent.INITIALIZED,
 			})
-			
+
 			entities_to_add.remove_at(i)
 			break
 
@@ -92,11 +96,7 @@ func destroy_dynamic_entity(e: Entity) -> void:
 
 ## Gets an entity by its id.
 func get_entity_by_id(eid: String) -> Entity:
-	var e: Entity = null
-	for id: String in entities:
-		if id == eid:
-			e = entities[id]
-	return e
+	return entities.get(eid, null)
 
 
 ## Gets all entities.
@@ -114,8 +114,8 @@ func get_entities_by_tag(tag: int) -> Array[Entity]:
 		if entities[id].tags.has(tag):
 			entities_by_tag.append(entities[id])
 	return entities_by_tag
-	
-	
+
+
 ## Gets all entities that have a specific componenent type.
 func get_entities_with_component(component_name: String) -> Array[Entity]:
 	var entities_with_component: Array[Entity] = []
@@ -123,8 +123,8 @@ func get_entities_with_component(component_name: String) -> Array[Entity]:
 		if entities[id].has_component(component_name):
 			entities_with_component.append(entities[id])
 	return entities_with_component
-	
-	
+
+
 ## Determines if a specific [Entity] has a component.
 func has_component(eid: String, component_name: String) -> bool:
 	var has := false
@@ -151,7 +151,7 @@ func is_same_entity(entity_0: Entity, entity_1: Entity) -> bool:
 			# var script_0: ScriptData = entity_0.get_component("ScriptData") as ScriptData
 			# var script_1: ScriptData = entity_1.get_component("ScriptData") as ScriptData
 			# if script_0.script_name == script_1.script_name:
-				# both scripts share the same name
+			# both scripts share the same name
 			#	return true
 			pass
 
@@ -170,12 +170,21 @@ func kill_all_entities() -> void:
 
 
 func remove_entity(id: String) -> void:
+	if not entities.has(id):
+		return
+
+	var entity: Entity = entities[id]
+
+	_notify_components_removed(entity)
+
+	entity._internal_destroy()  # Use internal method
 	entities.erase(id)
+	entity_removed.emit(id, entity)  # Now actually emitted
 
 
 func remove_all_entities() -> void:
-	for id: String in entities:
-		entities.erase(id)
+	for id: String in entities.keys():  # .keys() to avoid modification during iteration
+		remove_entity(id)
 
 ## —————————————————————————————————————————————
 #region API
@@ -229,7 +238,10 @@ func remove_all_entities() -> void:
 func update() -> void:
 	for entity in entities_to_add:
 		entities[entity.id] = entity
-		entity_added.emit(entity.id)
+
+		_notify_components_added(entity)
+
+		entity_added.emit(entity)
 		script_event.emit({
 			"source_id": entity.id,
 			"event_type": ScriptEvent.INITIALIZED,
@@ -244,8 +256,14 @@ func update() -> void:
 
 	for entity_id in kill_list:
 		var e: Entity = entities[entity_id]
+
+		# Notify components before destruction
+		_notify_components_removed(e)
+
 		destroy_dynamic_entity(e)
 		entities.erase(entity_id)
+
+		entity_destroyed.emit(entity_id, e)  # Now actually emitted
 
 
 ## —————————————————————————————————————————————
@@ -255,9 +273,9 @@ func update() -> void:
 
 ## Assigns an [EntityComponent] to an entity with the matching reference id. This should be used for existing entities only.
 ## To add components to new entities, write the code in the creation methods.
-func add_component(eid: StringName, comp: EntityComponent) -> void:
+func add_component(eid: String, comp: EntityComponent) -> void:
 	# --- Safety checks ---
-	if is_valid_entity(eid):
+	if not is_valid_entity(eid):
 		push_error("EntityManager.add_component: entity %s not found." % eid)
 		return
 
@@ -265,17 +283,17 @@ func add_component(eid: StringName, comp: EntityComponent) -> void:
 		push_error("EntityManager.add_component: null component for %s" % eid)
 		return
 
-	var cname := comp.get_class()
+	var cname := comp.get_class_name()
 	var entity: Entity = get_entity_by_id(eid)
 
-	# --- Replace existing component if necessary ---
+	# Handle replacement
 	if entity.has_component(cname):
+		var old_comp: EntityComponent = entity.get_component(cname)
+		old_comp.on_removed(entity, self)
 		push_warning("Entity %s already has component %s. Replacing." % [eid, cname])
 
 	entity.set_component(comp)
-	# --- Lifecycle hook (optional) ---
-	if comp.has_method("_on_added_to_entity"):
-		comp._on_added_to_entity(eid)
+	comp.on_added(entity, self)
 
 
 ## Gets an [EntityComponent] assigned to an [Entity].
@@ -288,15 +306,46 @@ func get_component(id: String, script: Script) -> EntityComponent:
 
 	return ret_val
 
+
 ## Returns all component instances attached to the given entity.
-func get_components(entity_id: StringName) -> Array:
+func get_components(entity_id: String) -> Array:
 	if not entities.has(entity_id):
 		return []
 	var entry: Entity = entities[entity_id]
 	return entry.get_components().values()
-	
+
+
+## Removes a component from an entity.
+func remove_component(eid: String, component_name: StringName) -> bool:
+	if not is_valid_entity(eid):
+		return false
+
+	var entity: Entity = get_entity_by_id(eid)
+	if not entity.has_component(component_name):
+		return false
+
+	var comp: EntityComponent = entity.get_component(component_name)
+	comp.on_removed(entity, self)
+
+	return entity.remove_component(component_name)
+
 #endregion
 
+## —————————————————————————————————————————————
+#region Lifecycle Helpers
+## —————————————————————————————————————————————
+
+
+func _notify_components_added(entity: Entity) -> void:
+	for comp in entity.get_components().values():
+		comp.on_added(entity, self)
+
+
+func _notify_components_removed(entity: Entity) -> void:
+	for comp in entity.get_components().values():
+		comp.on_removed(entity, self)
+
+#endregion
 
 func to_dict() -> Dictionary:
 	var out := {"entities": []}
@@ -323,8 +372,8 @@ func from_dict(snapshot: Dictionary) -> bool:
 		if eid == &"":
 			eid = StringName("E" + str(ents.hash()))
 		var _new_id := eid
-		#TODO - create logic to load entities from dictionary
-		# if em.has_method("create_entity_with_id"):
+	#TODO - create logic to load entities from dictionary
+	# if em.has_method("create_entity_with_id"):
 	#			new_id = em.create_entity_with_id(eid)
 	#		elif em.has_method("create_entity"):
 	#			new_id = em.create_entity(eid)

@@ -7,7 +7,7 @@ enum Category {
 }
 
 enum Response {
-   SUCCESS, FAILURE, RUNNING
+	SUCCESS, FAILURE, RUNNING
 }
 
 ## the [ControlFlowNode]'s category
