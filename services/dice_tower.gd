@@ -711,7 +711,6 @@ class ExpressionParser:
 
 		# Initial rolls
 		var rolls: Array = tower.roll_dice(count, sides)
-		var original_rolls: Array = rolls.duplicate()
 
 		# Handle rerolls (rN = reroll Ns once)
 		var rerolled_values: Array = []

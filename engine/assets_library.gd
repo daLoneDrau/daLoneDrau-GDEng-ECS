@@ -78,7 +78,7 @@ func add_textures_from_grid(
 
 	for i in range(count):
 		var col: int = i % columns
-		var row: int = i / columns
+		var row: int = int(float(i) / columns)
 		var rect := Rect2i(
 			col * cell_size.x,
 			row * cell_size.y,

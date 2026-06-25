@@ -107,7 +107,7 @@ func _connect_stat_signals(stat_id: StringName, stat: Stat) -> void:
 		stat.modifiers_changed.connect(_on_stat_modifiers_changed.bind(stat_id))
 
 
-func _disconnect_stat_signals(stat_id: StringName, stat: Stat) -> void:
+func _disconnect_stat_signals(_stat_id: StringName, stat: Stat) -> void:
 	if stat == null:
 		return
 

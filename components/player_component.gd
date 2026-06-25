@@ -290,8 +290,8 @@ func _update_play_time() -> void:
 func get_play_time_string() -> String:
 	_update_play_time()
 	var total_seconds := int(play_time_seconds)
-	var hours := total_seconds / 3600
-	var minutes := (total_seconds % 3600) / 60
+	var hours := int(float(total_seconds) / 3600)
+	var minutes := int(float(total_seconds % 3600) / 60)
 	var seconds := total_seconds % 60
 
 	if hours > 0:
@@ -305,8 +305,8 @@ func get_play_time() -> Dictionary:
 	var total_seconds := int(play_time_seconds)
 	return {
 		"total_seconds": total_seconds,
-		"hours": total_seconds / 3600,
-		"minutes": (total_seconds % 3600) / 60,
+		"hours": int(float(total_seconds) / 3600),
+		"minutes": int(float(total_seconds % 3600) / 60),
 		"seconds": total_seconds % 60,
 	}
 

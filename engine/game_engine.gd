@@ -186,6 +186,9 @@ func change_scene(scene_name:String, scene_path: String="") -> void:
 	if not scenes.has(scene_name):
 		push_error("Scene '%s' not registered and no path provided." % scene_name)
 		return
+		
+	if primary_scene_key == "":
+		primary_scene_key = get_tree().current_scene.name
 
 	if primary_scene_key == scene_name:
 		return  # Already on this scene

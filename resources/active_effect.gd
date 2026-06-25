@@ -76,10 +76,10 @@ func _to_string() -> String:
 			duration_str = " (%d uses)" % uses_remaining
 
 	return "%s%s%s from %s" % [
-	display_name if display_name else effect_id,
-	stack_str,
-	duration_str,
-	source_id
+		StringName(display_name) if display_name else effect_id,
+		stack_str,
+		duration_str,
+		source_id
 	]
 
 
@@ -111,10 +111,10 @@ static func from_dict(data: Dictionary) -> ActiveEffect:
 	active.display_name = data.get("display_name", "")
 	active.description = data.get("description", "")
 	active.icon_id = StringName(data.get("icon_id", ""))
-	active.duration_type = int(data.get("duration_type", EffectGrant.DurationType.PERMANENT))
+	active.duration_type = int(data.get("duration_type", EffectGrant.DurationType.PERMANENT)) as EffectGrant.DurationType
 	active.duration_remaining = float(data.get("duration_remaining", 0.0))
 	active.uses_remaining = int(data.get("uses_remaining", 0))
-	active.stack_behavior = int(data.get("stack_behavior", EffectGrant.StackBehavior.REPLACE))
+	active.stack_behavior = int(data.get("stack_behavior", EffectGrant.StackBehavior.REPLACE)) as EffectGrant.StackBehavior
 	active.stacks = int(data.get("stacks", 1))
 	active.max_stacks = int(data.get("max_stacks", 1))
 	active.params = data.get("params", {})

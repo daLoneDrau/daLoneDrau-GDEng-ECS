@@ -67,6 +67,6 @@ static func from_dict(data: Dictionary) -> StatModifierEntry:
 	entry.stack_group = StringName(data.get("stack_group", ""))
 	entry.display_name = data.get("display_name", "")
 	entry.icon_id = StringName(data.get("icon_id", ""))
-	entry.duration_type = int(data.get("duration_type", DurationType.PERMANENT))
+	entry.duration_type = int(data.get("duration_type", DurationType.PERMANENT)) as DurationType
 	entry.description = data.get("description", "")
 	return entry

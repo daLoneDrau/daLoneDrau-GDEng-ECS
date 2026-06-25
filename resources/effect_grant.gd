@@ -71,7 +71,7 @@ func _to_string() -> String:
 		DurationType.END_OF_COMBAT:
 			duration_str = " (combat)"
 
-	return "%s%s" % [display_name if display_name else effect_id, duration_str]
+	return "%s%s" % [StringName(display_name) if display_name else effect_id, duration_str]
 
 
 func to_dict() -> Dictionary:
@@ -95,10 +95,10 @@ static func from_dict(data: Dictionary) -> EffectGrant:
 	grant.display_name = data.get("display_name", "")
 	grant.description = data.get("description", "")
 	grant.icon_id = StringName(data.get("icon_id", ""))
-	grant.duration_type = int(data.get("duration_type", DurationType.PERMANENT))
+	grant.duration_type = int(data.get("duration_type", DurationType.PERMANENT)) as DurationType
 	grant.duration_seconds = float(data.get("duration_seconds", 0.0))
 	grant.uses = int(data.get("uses", 0))
 	grant.params = data.get("params", {})
-	grant.stack_behavior = int(data.get("stack_behavior", StackBehavior.REPLACE))
+	grant.stack_behavior = int(data.get("stack_behavior", StackBehavior.REPLACE)) as StackBehavior
 	grant.max_stacks = int(data.get("max_stacks", 1))
 	return grant

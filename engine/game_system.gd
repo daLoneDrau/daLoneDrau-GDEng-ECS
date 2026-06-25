@@ -106,4 +106,4 @@ func print_system_debug() -> void:
 	print("  Enabled: %s" % enabled)
 	print("  Priority: %d" % priority)
 	print("  Tick interval: %s" % tick_interval)
-	print("  Scene: %s" % (scene.name if scene else "null"))
+	print("  Scene: %s" % (scene.name if scene else &"null"))
