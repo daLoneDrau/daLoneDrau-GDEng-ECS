@@ -153,14 +153,13 @@ func _route_input_to_scene(scene: Node, key_name: String, phase: String, event: 
 			return true
 
 	# Try "any_key" fallback
-	if scene.has_action("any_key"):
-		if scene.has_method("get_registered_action"):
-			var any_def: String = scene.get_registered_action("any_key")
-			scene.do_action(GameAction.new(any_def, phase))
-			key_action_routed.emit("any_key", phase)
-			if event.pressed:
-				last_keycode = event.keycode
-			return true
+	if scene.has_action("any_key") and scene.get_action("any_key").length() > 0:
+		var any_def: String = scene.get_action("any_key")
+		scene.do_action(GameAction.new(any_def, phase))
+		key_action_routed.emit("any_key", phase)
+		if event.pressed:
+			last_keycode = event.keycode
+		return true
 
 	return false
 
@@ -191,6 +190,8 @@ func change_scene(scene_name:String, scene_path: String="") -> void:
 		primary_scene_key = get_tree().current_scene.name
 
 	if primary_scene_key == scene_name:
+		if not primary_scene:
+			primary_scene = get_tree().current_scene as Scene
 		return  # Already on this scene
 
 	last_scene = primary_scene_key  # Simple!
