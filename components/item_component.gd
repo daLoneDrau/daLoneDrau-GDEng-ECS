@@ -54,8 +54,9 @@ var price: float
 ## Current count for this instance/stack (systems maintain/clamp).
 var quantity: int = 1
 
-## Optional reference to stat modifiers applied when equipped/used (interpreted by systems).
-var modifiers: EquipmentItemModifiers = null
+# Typed as ItemModifierBundle rather than EquipmentItemModifiers so that
+# modifiers apply to StatsComponent, not AbilitiesComponent.
+var modifiers: ItemModifierBundle = null
 
 ## the array of [EquipmentSlot]s the item can be equipped in (left or right hand, one or more fingers, or head, etc...)
 var equip_slots: Array[int]
