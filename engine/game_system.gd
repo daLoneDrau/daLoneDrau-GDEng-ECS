@@ -36,8 +36,10 @@ func initialize(owner_scene: Scene) -> void:
 @abstract func _on_initialize() -> void
 
 
-## Handle discrete game events (override in subclass)
-@abstract func handle_event(_event_name: String, _payload: Dictionary = {}) -> void
+## Handle discrete game events (override in subclass).
+## Return true if the event was handled successfully, false on failure.
+## Unrecognised events should return true (no failure).
+@abstract func handle_event(_event_name: String, _payload: Dictionary = {}) -> bool
 
 
 func process(delta: float) -> void:
@@ -90,13 +92,18 @@ func get_system(system_name: StringName) -> GameSystem:
 	return null
 
 
-## Emit event to all other systems in scene
-func broadcast_event(event_name: String, payload: Dictionary = {}) -> void:
+## Emit event to all other systems in scene.
+## Returns false if any system's handle_event returns false; true otherwise.
+## A system that does not recognise the event should return true.
+func broadcast_event(event_name: String, payload: Dictionary = {}) -> bool:
 	if not scene:
-		return
+		return true
+	var success: bool = true
 	for system in scene._systems.values():
 		if system != self and system.enabled:
-			system.handle_event(event_name, payload)
+			if not system.handle_event(event_name, payload):
+				success = false
+	return success
 
 #endregion
 
