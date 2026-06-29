@@ -8,7 +8,7 @@
 ## - Slot validation & conflict resolution (two-hand, uniques, etc.)
 ## - Equip/unequip/swap public API with before/after hooks
 ## - Inventory handoff (move item in/out of InventoryComponent)
-## - Modifier aggregation (merge EquipmentItemModifiers across slots)
+## - Modifier aggregation (merge ItemModifierBundle across slots)
 ## - Signals for PlayerSystem/UI/ScriptSystem listeners
 ## Subclass this to bind field names if your components differ.
 ## All "EXPECTS:" comments mark small glue you may need to adapt.
@@ -48,7 +48,7 @@ var _player_system: PlayerSystem
 ## —————————————————————————————————————————————
 #region Cached state
 ## —————————————————————————————————————————————
-# entity_id -> EquipmentItemModifiers (merged from all equipped items)
+# entity_id -> ItemModifierBundle (merged from all equipped items)
 var _merged_cache: Dictionary = {}
 # entity_id -> {slot:int -> item_id:StringName}
 var _equipped_view: Dictionary = {}
@@ -240,7 +240,7 @@ func swap_slots(entity_id: StringName, slot_a: int, slot_b: int) -> bool:
 
 
 ## Query the merged modifiers for an entity (cached).
-func get_merged_modifiers(entity_id: StringName) -> EquipmentItemModifiers:
+func get_merged_modifiers(entity_id: StringName) -> ItemModifierBundle:
 	if _merged_cache.has(entity_id):
 		return _merged_cache[entity_id]
 	# Compute on demand if missing
@@ -566,8 +566,8 @@ func _recompute_and_emit(entity_id: StringName) -> void:
 	_script_guard("equipment_changed", entity_id, &"", -1)
 
 
-func _recompute_merged(entity_id: StringName) -> EquipmentItemModifiers:
-	var merged := EquipmentItemModifiers.new()  # EXPECTS: has add_from(other) or similar
+func _recompute_merged(entity_id: StringName) -> ItemModifierBundle:
+	var merged := ItemModifierBundle.new()  # EXPECTS: has add_from(other) or similar
 	var map := _get_equipped_map(entity_id)
 	var set_counts := {}   # set_id -> pieces
 
@@ -616,33 +616,28 @@ func _item_set_bonuses_for(set_id: StringName) -> Array:
 #				return ic.set_bonuses
 #	return []
 
-func _coerce_mods(v) -> EquipmentItemModifiers:
-	if v is EquipmentItemModifiers:
+func _coerce_mods(v) -> ItemModifierBundle:
+	if v is ItemModifierBundle:
 		return v
 	# v is Dictionary — build a temp EquipmentItemMods
-	var tmp: EquipmentItemModifiers = EquipmentItemModifiers.new()
+	var tmp: ItemModifierBundle = ItemModifierBundle.new()
 	for k in v.keys():
 		tmp.set(k, v[k])
 	return tmp
 
 
-func _mods_for_item(item_id: StringName) -> EquipmentItemModifiers:
+func _mods_for_item(item_id: StringName) -> ItemModifierBundle:
 	# EXPECTS: ItemComponent either embeds modifiers or references a child resource.
 	var item: ItemComponent = _entity_manager.get_component(item_id, ItemComponent)
 	if item == null:
 		return null
 
-	# Common patterns:
-	# 1) item.equipment_mods : EquipmentItemModifiers
-	# 2) item.get_modifiers() -> EquipmentItemModifiers
-	if item.has_method("get_modifiers"):
-		return item.get_modifiers()
 	var mods := item.modifiers
-	return mods if (mods is EquipmentItemModifiers) else null
+	return mods if (mods is ItemModifierBundle) else null
 
 
-func _add_mods(into: EquipmentItemModifiers, from: EquipmentItemModifiers) -> void:
-	# EXPECTS: EquipmentItemModifiers defines an API like: into.merge(from) or into.add_from(from)
+func _add_mods(into: ItemModifierBundle, from: ItemModifierBundle) -> void:
+	# EXPECTS: ItemModifierBundle defines an API like: into.merge(from) or into.add_from(from)
 	into.merge(from)
 
 ## —————————————————————————————————————————————

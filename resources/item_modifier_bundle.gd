@@ -358,10 +358,10 @@ func get_tooltip_text() -> String:
 
 	# Stat modifiers
 	for mod in stat_modifiers:
-		var sign := "+" if mod.amount >= 0 else ""
+		var op_sign := "+" if mod.amount >= 0 else ""
 		var suffix := "%" if mod.is_percentage else ""
 		var stat_name := String(mod.stat_id).capitalize()
-		lines.append("%s%d%s %s" % [sign, mod.amount, suffix, stat_name])
+		lines.append("%s%d%s %s" % [op_sign, mod.amount, suffix, stat_name])
 
 	# Effects
 	for grant in effect_grants:

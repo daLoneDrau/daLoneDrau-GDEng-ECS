@@ -56,9 +56,10 @@ func handle_script_event(script_message: Dictionary) -> void:
 		GlobalUtils.ScriptMessageAudience.ALL_ENTITIES:
 			process_script_message(script_message)
 		GlobalUtils.ScriptMessageAudience.ENTITY_GROUP:
-			var parent: Entity = entity_manager_instance.get_entity_by_id(parent_entity_id)
-			if script_message.recipient in parent.groups:
-				process_script_message(script_message)
+			pass
+			# var parent: Entity = entity_manager_instance.get_entity_by_id(parent_entity_id)
+			# if script_message.recipient in parent.groups:
+			# 	process_script_message(script_message)
 
 
 ## Processes a script meant for this Entity.
