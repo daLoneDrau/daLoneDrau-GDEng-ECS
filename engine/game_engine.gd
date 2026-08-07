@@ -80,6 +80,8 @@ func _process(delta: float) -> void:
 	if entity_manager and entity_manager.has_method("update"):
 		if not get_tree().paused:
 			entity_manager.update()
+		else:
+			print("paused - no update")
 
 	frames_processed += 1
 

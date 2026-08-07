@@ -159,7 +159,7 @@ func set_component(component: EntityComponent) -> void:
 	assert(id != "", "Entity must have an ID before adding components")
 	var key: StringName = component.get_class_name()  # ensure your components implement this
 
-	var old_component: EntityComponent = _components[key]  # maybe do something w/this eventually
+	var old_component: EntityComponent = _components.get(key)  # maybe do something w/this eventually
 	if old_component:
 		old_component.parent_entity_id = ""  # Detach old component
 		component_removed.emit(key, old_component)

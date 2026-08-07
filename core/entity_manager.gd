@@ -53,6 +53,7 @@ func uuidv4() -> String:
 
 func add_entity(e: Entity) -> void:
 	entities_to_add.append(e)
+	print("added entity ", entities_to_add, " ", entities_to_add.size())
 
 
 ## Adds an entity immediately instead of waiting for the update.
@@ -236,7 +237,9 @@ func remove_all_entities() -> void:
 
 
 func update() -> void:
+	print("update ", entities_to_add, " ", entities_to_add.size())
 	for entity in entities_to_add:
+		print("add entity")
 		entities[entity.id] = entity
 
 		_notify_components_added(entity)
