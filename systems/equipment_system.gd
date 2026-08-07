@@ -667,4 +667,3 @@ func _script_guard(phase: String, entity_id: StringName, item_id: StringName, sl
 ## —————————————————————————————————————————————
 func _emit_equip_failed(entity_id: StringName, item_id: StringName, reasons: Array[String]) -> void:
 	equip_failed.emit(entity_id, item_id, reasons)
-

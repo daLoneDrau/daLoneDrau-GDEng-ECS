@@ -80,8 +80,6 @@ func _process(delta: float) -> void:
 	if entity_manager and entity_manager.has_method("update"):
 		if not get_tree().paused:
 			entity_manager.update()
-		else:
-			print("paused - no update")
 
 	frames_processed += 1
 
@@ -226,7 +224,6 @@ func _instantiate_scene(path: String) -> Scene:
 	if packed == null:
 		push_error("GameEngine: failed to load scene at %s" % path)
 		return null
-	print("Instantiated")
 	var node: Scene = packed.instantiate() as Scene
 	if node and node.has_method("set_engine"):
 		node.set_engine(self)
