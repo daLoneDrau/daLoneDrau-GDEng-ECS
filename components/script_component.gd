@@ -8,6 +8,8 @@
 @abstract class_name ScriptComponent
 extends EntityComponent
 
+
+const IS_SLOT_ROOT: bool = true
 var main_script: EntityScript        # must extend EntityScript
 var master_script: EntityScript      # optional overlay
 @export var master_first: bool = true

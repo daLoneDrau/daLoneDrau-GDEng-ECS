@@ -10,6 +10,8 @@
 extends EntityComponent
 
 
+const IS_SLOT_ROOT: bool = true
+
 ## —————————————————————————————————————————————
 #region Equipment Slots
 ## —————————————————————————————————————————————
