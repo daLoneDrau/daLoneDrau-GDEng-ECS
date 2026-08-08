@@ -353,7 +353,7 @@ func _resolve_slot(entity_id: StringName, item_id: StringName, desired_slot: int
 		if not slots_for_item.has(desired_slot):
 			reasons.append("Item not compatible with desired slot")
 			return -1
-		var r := []
+		var r: Array[String] = []
 		if not _slot_accepts_item(entity_id, desired_slot, item_id, r):
 			reasons.append_array(r)
 			return -1
@@ -363,13 +363,13 @@ func _resolve_slot(entity_id: StringName, item_id: StringName, desired_slot: int
 	var map := _get_equipped_map(entity_id)
 	for s in slots_for_item:
 		if not map.has(s) or map[s] == null or map[s] == &"":
-			var r := []
+			var r: Array[String] = []
 			if _slot_accepts_item(entity_id, s, item_id, r):
 				return s
 
 	# If all occupied, allow replacing first compatible slot (policy choice)
 	for s in slots_for_item:
-		var r2 := []
+		var r2: Array[String] = []
 		if _slot_accepts_item(entity_id, s, item_id, r2):
 			return s
 
