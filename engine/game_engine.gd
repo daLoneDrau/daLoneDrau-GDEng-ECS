@@ -213,6 +213,7 @@ func _on_scene_changed(scene_name: String) -> void:
 	primary_scene = get_tree().current_scene as Scene
 
 	if primary_scene and primary_scene.has_method("set_engine"):
+		print("GameEngine: Set engine on '%s'" % scene_name)
 		primary_scene.set_engine(self)
 
 	scene_changed.emit(scene_name, primary_scene)
