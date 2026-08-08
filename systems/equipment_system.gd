@@ -225,11 +225,11 @@ func swap_slots(entity_id: StringName, slot_a: int, slot_b: int) -> bool:
 
 	# Naive swap with validation for destination compatibility
 	if a != null:
-		var reasons_a := []
+		var reasons_a: Array[String] = []
 		if not _slot_accepts_item(entity_id, slot_b, a, reasons_a):
 			return false
 	if b != null:
-		var reasons_b := []
+		var reasons_b: Array[String] = []
 		if not _slot_accepts_item(entity_id, slot_a, b, reasons_b):
 			return false
 
@@ -659,7 +659,12 @@ func _script_guard(phase: String, entity_id: StringName, item_id: StringName, sl
 	# _script_system._dispatch(entity_id, 
 	if Switchboard_auto.has_method("dispatch_bool"):
 		return bool(Switchboard_auto.dispatch_bool(channel, payload, true)) # default allow
-	Switchboard_auto.emit_signal(channel, payload) # fire-and-forget
+	# Godot's emit_signal() hard-errors (ERR_UNAVAILABLE) if the signal was
+	# never declared on the object — dynamic per-phase channel names like
+	# "equipment_can_equip" aren't declared on Switchboard, so guard with
+	# has_signal() rather than emitting blind. Still defaults to allow.
+	if Switchboard_auto.has_signal(channel):
+		Switchboard_auto.emit_signal(channel, payload) # fire-and-forget
 	return true
 
 ## —————————————————————————————————————————————
