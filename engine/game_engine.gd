@@ -10,6 +10,9 @@ signal key_action_routed(action_name: String, phase: String)  # "START"/"END"
 signal scene_pushed(key: String, node: Scene)
 signal scene_popped(key: String)
 
+const _ON_SCENE_CHANGED_RETRY_DELAY_SEC: float = 0.05
+const _ON_SCENE_CHANGED_MAX_ATTEMPTS: int = 100  # ~5 seconds of real waiting at the delay above
+
 ## The current scene.
 var assets: AssetsLibrary
 
@@ -210,7 +213,31 @@ func change_scene(scene_name:String, scene_path: String="") -> void:
 
 
 func _on_scene_changed(scene_name: String) -> void:
-	primary_scene = get_tree().current_scene as Scene
+	var candidate: Node = get_tree().current_scene
+	var attempts: int = 0
+
+	while (candidate == null or not (candidate is Scene)) and attempts < _ON_SCENE_CHANGED_MAX_ATTEMPTS:
+		await get_tree().create_timer(_ON_SCENE_CHANGED_RETRY_DELAY_SEC).timeout
+		candidate = get_tree().current_scene
+		attempts += 1
+
+	if candidate == null or not (candidate is Scene):
+		var waited_sec := attempts * _ON_SCENE_CHANGED_RETRY_DELAY_SEC
+		push_error(
+				"GameEngine: current_scene never resolved to a Scene for '%s' after %.2fs (%d attempts)." % [scene_name, waited_sec, attempts]
+		)
+		# Diagnostic breadcrumb — if this fires, print what current_scene
+		# actually IS, to distinguish "still null" from "a Node, but the
+		# wrong type/script" (see note below).
+		if candidate == null:
+			push_error("GameEngine: current_scene is still null.")
+		else:
+			push_error(
+					"GameEngine: current_scene is a %s, script=%s — not a Scene." % [candidate.get_class(), str(candidate.get_script())]
+			)
+		return
+
+	primary_scene = candidate as Scene
 
 	if primary_scene and primary_scene.has_method("set_engine"):
 		print("GameEngine: Set engine on '%s'" % scene_name)

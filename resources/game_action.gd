@@ -22,10 +22,12 @@ func _init(n: String, p: String, a: Variant = null) -> void:
 	self.args = a
 
 
+## Determines if the current action has just started.
 func is_pressed() -> bool:
 	return phase == PHASE_START
 
 
+## Determines if the current action has completed.
 func is_released() -> bool:
 	return phase == PHASE_END
 
