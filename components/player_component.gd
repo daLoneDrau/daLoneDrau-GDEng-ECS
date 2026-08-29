@@ -341,7 +341,7 @@ func _to_string() -> String:
 		state_parts.append("cutscene")
 
 	var state_str := ", ".join(state_parts) if not state_parts.is_empty() else "active"
-	return "PlayerComponent[%s](P%d, %s, §%d)" % [parent_entity_id, player_index + 1, state_str, current_paragraph]
+	return "PlayerComponent[%s](P%d, %s)" % [parent_entity_id, player_index + 1, state_str]
 
 
 func print_debug() -> void:
