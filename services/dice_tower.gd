@@ -137,58 +137,6 @@ func roll_ability_score() -> DiceResult:
 #endregion
 
 ## —————————————————————————————————————————————
-#region Public API - Fighting Fantasy Helpers
-## —————————————————————————————————————————————
-
-
-## Roll initial SKILL (1d6 + 6)
-func roll_skill() -> DiceResult:
-	return roll_result("1d6+6")
-
-
-## Roll initial STAMINA (2d6 + 12)
-func roll_stamina() -> DiceResult:
-	return roll_result("2d6+12")
-
-
-## Roll initial LUCK (1d6 + 6)
-func roll_luck() -> DiceResult:
-	return roll_result("1d6+6")
-
-
-## Test your Luck - roll 2d6, succeed if <= current luck
-func test_luck(current_luck: int) -> DiceResult:
-	var result := roll_result("2d6")
-	result.target = current_luck
-	result.success = result.total <= current_luck
-	return result
-
-
-## Attack roll (2d6 + skill) for Attack Strength calculation
-func roll_attack(skill: int) -> DiceResult:
-	return roll_result("2d6+%d" % skill)
-
-
-## Combat round - returns attacker and defender Attack Strengths
-func roll_combat(attacker_skill: int, defender_skill: int) -> Dictionary:
-	var attacker := roll_attack(attacker_skill)
-	var defender := roll_attack(defender_skill)
-
-	var winner: String = "tie"
-	if attacker.total > defender.total:
-		winner = "attacker"
-	elif defender.total > attacker.total:
-		winner = "defender"
-
-	return {
-		"attacker": attacker,
-		"defender": defender,
-		"winner": winner
-	}
-
-#endregion
-
-## —————————————————————————————————————————————
 #region Public API - Simple Die Rollers
 ## —————————————————————————————————————————————
 
