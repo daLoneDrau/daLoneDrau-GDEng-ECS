@@ -278,133 +278,6 @@ func get_play_time() -> Dictionary:
 #endregion
 
 ## —————————————————————————————————————————————
-#region Gamebook: Paragraph Navigation
-## —————————————————————————————————————————————
-
-## Go to a specific paragraph
-func goto_paragraph(paragraph: int) -> void:
-	current_paragraph = paragraph
-
-
-## Check if a paragraph has been visited
-func has_visited(paragraph: int) -> bool:
-	return _visited_paragraphs.has(paragraph)
-
-
-## Get all visited paragraphs
-func get_visited_paragraphs() -> Array[int]:
-	var result: Array[int] = []
-	for p in _visited_paragraphs.keys():
-		result.append(int(p))
-	return result
-
-
-## Get count of visited paragraphs
-func get_visited_count() -> int:
-	return _visited_paragraphs.size()
-
-
-## Mark a paragraph as visited without navigating to it
-func mark_visited(paragraph: int) -> void:
-	_visited_paragraphs[paragraph] = true
-
-
-## Clear visited paragraphs (for new game)
-func clear_visited() -> void:
-	_visited_paragraphs.clear()
-
-#endregion
-
-## —————————————————————————————————————————————
-#region Gamebook: Story Flags
-## —————————————————————————————————————————————
-
-## Set a story flag
-func set_flag(flag: StringName, value: Variant = true) -> void:
-	var old_value: Variant = _story_flags.get(flag)
-	_story_flags[flag] = value
-	_emit_change(&"story_flag:" + String(flag), old_value, value)
-
-
-## Get a story flag value
-func get_flag(flag: StringName, default: Variant = null) -> Variant:
-	return _story_flags.get(flag, default)
-
-
-## Check if a flag is set (and optionally equals a value)
-func has_flag(flag: StringName, expected_value: Variant = null) -> bool:
-	if not _story_flags.has(flag):
-		return false
-	if expected_value != null:
-		return _story_flags[flag] == expected_value
-	return true
-
-
-## Remove a story flag
-func clear_flag(flag: StringName) -> bool:
-	return _story_flags.erase(flag)
-
-
-## Get all flag names
-func get_all_flags() -> Array[StringName]:
-	var result: Array[StringName] = []
-	for key in _story_flags.keys():
-		result.append(key)
-	return result
-
-
-## Clear all story flags (for new game)
-func clear_all_flags() -> void:
-	_story_flags.clear()
-
-#endregion
-
-## —————————————————————————————————————————————
-#region Gamebook: Provisions & Gold
-## —————————————————————————————————————————————
-
-## Use a provision to heal (returns true if successful)
-## Note: in_combat check requires EntityManager lookup now
-func use_provision() -> bool:
-	if provisions <= 0:
-		return false
-
-	provisions -= 1
-	# Note: Actual healing should be handled by the system using StatsComponent
-	# Combat check should be done by the system, not here
-	return true
-
-
-## Add provisions
-func add_provisions(amount: int) -> void:
-	provisions += amount
-
-
-## Check if player has provisions
-func has_provisions() -> bool:
-	return provisions > 0
-
-
-## Add gold
-func add_gold(amount: int) -> void:
-	gold += amount
-
-
-## Spend gold (returns true if successful)
-func spend_gold(amount: int) -> bool:
-	if gold < amount:
-		return false
-	gold -= amount
-	return true
-
-
-## Check if player can afford something
-func can_afford(amount: int) -> bool:
-	return gold >= amount
-
-#endregion
-
-## —————————————————————————————————————————————
 #region Signal Helpers
 ## —————————————————————————————————————————————
 
@@ -422,14 +295,6 @@ func _emit_change(field: StringName, old_value: Variant, new_value: Variant) -> 
 func to_dict() -> Dictionary:
 	_update_play_time()
 
-	var visited_array: Array[int] = []
-	for p in _visited_paragraphs.keys():
-		visited_array.append(int(p))
-
-	var flags_dict: Dictionary = {}
-	for key in _story_flags.keys():
-		flags_dict[String(key)] = _story_flags[key]
-
 	return {
 		"key": get_class_name(),
 		"enabled": enabled,
@@ -442,11 +307,6 @@ func to_dict() -> Dictionary:
 		"in_cutscene": in_cutscene,
 		"play_time_seconds": play_time_seconds,
 		"death_count": _death_count,
-		"current_paragraph": current_paragraph,
-		"visited_paragraphs": visited_array,
-		"story_flags": flags_dict,
-		"provisions": provisions,
-		"gold": gold,
 	}
 
 
@@ -462,18 +322,6 @@ func from_dict(data: Dictionary) -> void:
 	in_cutscene = bool(data.get("in_cutscene", false))
 	play_time_seconds = float(data.get("play_time_seconds", 0.0))
 	_death_count = int(data.get("death_count", 0))
-	current_paragraph = int(data.get("current_paragraph", 1))
-	provisions = int(data.get("provisions", 10))
-	gold = int(data.get("gold", 0))
-
-	_visited_paragraphs.clear()
-	for p in data.get("visited_paragraphs", []):
-		_visited_paragraphs[int(p)] = true
-
-	_story_flags.clear()
-	var flags_data: Dictionary = data.get("story_flags", {})
-	for key in flags_data.keys():
-		_story_flags[StringName(key)] = flags_data[key]
 
 	_session_start_time = Time.get_ticks_msec()
 
@@ -511,12 +359,6 @@ func print_debug() -> void:
 	print("  --- Progression ---")
 	print("    Play Time: %s" % get_play_time_string())
 	print("    Deaths: %d" % _death_count)
-	print("  --- Gamebook ---")
-	print("    Current Paragraph: %d" % current_paragraph)
-	print("    Visited Paragraphs: %d" % get_visited_count())
-	print("    Story Flags: %d" % _story_flags.size())
-	print("    Provisions: %d" % provisions)
-	print("    Gold: %d" % gold)
 
 
 func get_summary() -> Dictionary:
@@ -535,11 +377,6 @@ func get_summary() -> Dictionary:
 		"play_time": get_play_time(),
 		"play_time_string": get_play_time_string(),
 		"death_count": _death_count,
-		"current_paragraph": current_paragraph,
-		"visited_count": get_visited_count(),
-		"flag_count": _story_flags.size(),
-		"provisions": provisions,
-		"gold": gold,
 	}
 
 #endregion
