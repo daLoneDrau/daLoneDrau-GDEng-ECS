@@ -2,7 +2,7 @@
 extends GameSystem
 
 
-## the canves where rendering takes place
+## the canvas where rendering takes place
 var canvas: CanvasItem
 
 ## the font size used to render the grid
