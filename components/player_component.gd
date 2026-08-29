@@ -90,7 +90,7 @@ signal player_respawned(entity_id: String)
 			_emit_change(&"in_cutscene", old, value)
 
 ## —————————————————————————————————————————————
-## Session Tracking
+#region Session Tracking
 ## —————————————————————————————————————————————
 
 @export_group("Tracking")
@@ -104,42 +104,7 @@ var _death_count: int = 0
 ## Timestamp when session started (for play time tracking)
 var _session_start_time: int = 0
 
-## —————————————————————————————————————————————
-## Gamebook-Specific (Fighting Fantasy)
-## —————————————————————————————————————————————
-
-@export_group("Gamebook")
-
-## Current paragraph/section number
-@export var current_paragraph: int = 1:
-	set(value):
-		if current_paragraph != value:
-			var old := current_paragraph
-			_visited_paragraphs[old] = true
-			current_paragraph = value
-			_emit_change(&"current_paragraph", old, value)
-
-## Set of visited paragraph numbers
-var _visited_paragraphs: Dictionary = {}  # int -> bool
-
-## Story flags/decisions (e.g., "met_wizard", "has_key_123")
-var _story_flags: Dictionary = {}  # StringName -> Variant
-
-## Number of provisions (food/healing items) remaining
-@export var provisions: int = 10:
-	set(value):
-		if provisions != value:
-			var old := provisions
-			provisions = maxi(0, value)
-			_emit_change(&"provisions", old, provisions)
-
-## Gold pieces
-@export var gold: int = 0:
-	set(value):
-		if gold != value:
-			var old := gold
-			gold = maxi(0, value)
-			_emit_change(&"gold", old, gold)
+#endregion
 
 
 ## —————————————————————————————————————————————
