@@ -72,7 +72,7 @@ func from_dict(data: Dictionary) -> void:
 ## —————————————————————————————————————————————
 
 ## Applies this modifier to an [AbilitiesComponent] (flat or percentage).
-func apply_to_abilities(abilities: AbilitiesComponent, ability_id: int) -> void:
+func apply_to_abilities(abilities: AbilitiesComponent, ability_id: StringName) -> void:
 	if abilities != null:
 		var s: AbilityScore = abilities.value(ability_id)
 		if s != null:
@@ -83,7 +83,7 @@ func apply_to_abilities(abilities: AbilitiesComponent, ability_id: int) -> void:
 				s.add_source(source_tag, value)
 
 ## Removes this modifier from an [AbilitiesComponent].
-func remove_from_abilities(abilities: AbilitiesComponent, ability_id: int) -> void:
+func remove_from_abilities(abilities: AbilitiesComponent, ability_id: StringName) -> void:
 	if abilities != null:
 		var s: AbilityScore = abilities.value(ability_id)
 		if s != null:

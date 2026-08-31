@@ -6,7 +6,7 @@ extends Resource
 
 ## Stat modifiers granted by this item
 ## Each entry is a StatModifierEntry resource
-@export var stat_modifiers: Array[StatModifierEntry] = []
+@export var ability_modifiers: Array[AbilityModifierEntry] = []
 
 ## Special effects granted by this item
 ## Each entry is an EffectGrant resource
@@ -21,18 +21,18 @@ extends Resource
 #region Application API
 ## —————————————————————————————————————————————
 
-## Apply all stat modifiers to a StatsComponent.
+## Apply all stat modifiers to a AbilitiesComponent.
 ## source_id: Identifier for removal later (typically item entity ID)
-func apply_stat_modifiers(stats: StatsComponent, source_id: StringName) -> void:
-	if stats == null:
+func apply_stat_modifiers(abilities: AbilitiesComponent, source_id: StringName) -> void:
+	if abilities == null:
 		return
 
-	for mod in stat_modifiers:
+	for mod in ability_modifiers:
 		if mod.stat_id == &"":
 			continue
 
 		# Clone the entry and set source
-		var entry := StatModifierEntry.new()
+		var entry := AbilityModifierEntry.new()
 		entry.stat_id = mod.stat_id
 		entry.source_id = source_id
 		entry.amount = mod.amount
@@ -43,15 +43,15 @@ func apply_stat_modifiers(stats: StatsComponent, source_id: StringName) -> void:
 		entry.description = mod.description
 		entry.duration_type = mod.duration_type
 
-		stats.add_modifier_entry(mod.stat_id, entry)
+		abilities.add_modifier_entry(mod.stat_id, entry)
 
 
-## Remove all stat modifiers from a StatsComponent by source.
-func remove_stat_modifiers(stats: StatsComponent, source_id: StringName) -> void:
-	if stats == null:
+## Remove all stat modifiers from a AbilitiesComponent by source.
+func remove_stat_modifiers(abilities: AbilitiesComponent, source_id: StringName) -> void:
+	if abilities == null:
 		return
 
-	stats.remove_modifiers_from_source(source_id)
+	abilities.remove_modifiers_from_source(source_id)
 
 
 ## Apply all effect grants to an EffectsComponent.
@@ -75,19 +75,19 @@ func remove_effects(effects: EffectsComponent, source_id: StringName) -> void:
 ## Apply everything (stats + effects) to an entity.
 ## Convenience method for equipment system.
 func apply_all(entity: Entity, source_id: StringName) -> void:
-	var stats: StatsComponent = entity.get_component(&"StatsComponent") as StatsComponent
+	var abilities: AbilitiesComponent = entity.get_component(&"AbilitiesComponent") as AbilitiesComponent
 	var effects: EffectsComponent = entity.get_component(&"EffectsComponent") as EffectsComponent
 
-	apply_stat_modifiers(stats, source_id)
+	apply_stat_modifiers(abilities, source_id)
 	apply_effects(effects, source_id)
 
 
 ## Remove everything (stats + effects) from an entity.
 func remove_all(entity: Entity, source_id: StringName) -> void:
-	var stats: StatsComponent = entity.get_component(&"StatsComponent") as StatsComponent
+	var abilities: AbilitiesComponent = entity.get_component(&"AbilitiesComponent") as AbilitiesComponent
 	var effects: EffectsComponent = entity.get_component(&"EffectsComponent") as EffectsComponent
 
-	remove_stat_modifiers(stats, source_id)
+	remove_stat_modifiers(abilities, source_id)
 	remove_effects(effects, source_id)
 
 #endregion
@@ -101,14 +101,14 @@ func meets_requirements(entity: Entity) -> bool:
 	if requirements.is_empty():
 		return true
 
-	var stats: StatsComponent = entity.get_component(&"StatsComponent") as StatsComponent
-	if stats == null:
+	var abilities: AbilitiesComponent = entity.get_component(&"AbilitiesComponent") as AbilitiesComponent
+	if abilities == null:
 		return false
 
-	for stat_id_str in requirements:
-		var stat_id := StringName(stat_id_str)
-		var required_value: int = int(requirements[stat_id_str])
-		var current_value := stats.get_value(stat_id, 0)
+	for ability_id_str in requirements:
+		var ability_id := StringName(ability_id_str)
+		var required_value: int = int(requirements[ability_id_str])
+		var current_value := abilities.value(ability_id).full
 
 		if current_value < required_value:
 			return false
@@ -123,19 +123,19 @@ func get_unmet_requirements(entity: Entity) -> Array[Dictionary]:
 	if requirements.is_empty():
 		return unmet
 
-	var stats: StatsComponent = entity.get_component(&"StatsComponent") as StatsComponent
+	var abilities: AbilitiesComponent = entity.get_component(&"AbilitiesComponent") as AbilitiesComponent
 
-	for stat_id_str in requirements:
-		var stat_id := StringName(stat_id_str)
-		var required_value: int = int(requirements[stat_id_str])
+	for ability_id_str in requirements:
+		var ability_id := StringName(ability_id_str)
+		var required_value: int = int(requirements[ability_id_str])
 		var current_value := 0
 
-		if stats:
-			current_value = stats.get_value(stat_id, 0)
+		if abilities:
+			current_value = abilities.get_value(ability_id, 0)
 
 		if current_value < required_value:
 			unmet.append({
-				"stat_id": stat_id,
+				"ability_id": ability_id,
 				"required": required_value,
 				"current": current_value
 			})
@@ -149,9 +149,9 @@ func get_unmet_requirements(entity: Entity) -> Array[Dictionary]:
 ## —————————————————————————————————————————————
 
 ## Check if this bundle modifies a specific stat
-func modifies_stat(stat_id: StringName) -> bool:
-	for mod in stat_modifiers:
-		if mod.stat_id == stat_id:
+func modifies_stat(ability_id: StringName) -> bool:
+	for mod in ability_modifiers:
+		if mod.ability_id == ability_id:
 			return true
 	return false
 
@@ -165,40 +165,40 @@ func grants_effect(effect_id: StringName) -> bool:
 
 
 ## Get all modifiers for a specific stat
-func get_modifiers_for_stat(stat_id: StringName) -> Array[StatModifierEntry]:
-	var result: Array[StatModifierEntry] = []
-	for mod in stat_modifiers:
-		if mod.stat_id == stat_id:
+func get_modifiers_for_stat(ability_id: StringName) -> Array[AbilityModifierEntry]:
+	var result: Array[AbilityModifierEntry] = []
+	for mod in ability_modifiers:
+		if mod.stat_id == ability_id:
 			result.append(mod)
 	return result
 
 
 ## Get total flat modifier for a specific stat (for preview/tooltip)
-func get_stat_total(stat_id: StringName) -> int:
+func get_stat_total(ability_id: StringName) -> int:
 	var total := 0
-	for mod in stat_modifiers:
-		if mod.stat_id == stat_id and not mod.is_percentage:
+	for mod in ability_modifiers:
+		if mod.stat_id == ability_id and not mod.is_percentage:
 			total += mod.amount
 	return total
 
 
 ## Get total percentage modifier for a specific stat
-func get_stat_percentage_total(stat_id: StringName) -> float:
+func get_stat_percentage_total(ability_id: StringName) -> float:
 	var total := 0.0
-	for mod in stat_modifiers:
-		if mod.stat_id == stat_id and mod.is_percentage:
+	for mod in ability_modifiers:
+		if mod.stat_id == ability_id and mod.is_percentage:
 			total += mod.amount
 	return total
 
 
 ## Check if bundle is empty (no modifiers or effects)
 func is_empty() -> bool:
-	return stat_modifiers.is_empty() and effect_grants.is_empty()
+	return ability_modifiers.is_empty() and effect_grants.is_empty()
 
 
 ## Get count of all modifiers and effects
 func get_total_count() -> int:
-	return stat_modifiers.size() + effect_grants.size()
+	return ability_modifiers.size() + effect_grants.size()
 
 #endregion
 
@@ -212,10 +212,10 @@ func merge(other: ItemModifierBundle) -> ItemModifierBundle:
 	var merged := ItemModifierBundle.new()
 
 	# Copy stat modifiers
-	for mod in stat_modifiers:
-		merged.stat_modifiers.append(mod)
-	for mod in other.stat_modifiers:
-		merged.stat_modifiers.append(mod)
+	for mod in ability_modifiers:
+		merged.ability_modifiers.append(mod)
+	for mod in other.ability_modifiers:
+		merged.ability_modifiers.append(mod)
 
 	# Copy effect grants
 	for grant in effect_grants:
@@ -242,8 +242,8 @@ func merge(other: ItemModifierBundle) -> ItemModifierBundle:
 func duplicate_bundle() -> ItemModifierBundle:
 	var copy := ItemModifierBundle.new()
 
-	for mod in stat_modifiers:
-		copy.stat_modifiers.append(mod)
+	for mod in ability_modifiers:
+		copy.ability_modifiers.append(mod)
 
 	for grant in effect_grants:
 		copy.effect_grants.append(grant)
@@ -260,7 +260,7 @@ func duplicate_bundle() -> ItemModifierBundle:
 
 func to_dict() -> Dictionary:
 	var mods_data: Array[Dictionary] = []
-	for mod in stat_modifiers:
+	for mod in ability_modifiers:
 		mods_data.append(mod.to_dict())
 
 	var grants_data: Array[Dictionary] = []
@@ -275,9 +275,9 @@ func to_dict() -> Dictionary:
 
 
 func from_dict(data: Dictionary) -> void:
-	stat_modifiers.clear()
+	ability_modifiers.clear()
 	for mod_data in data.get("stat_modifiers", []):
-		stat_modifiers.append(StatModifierEntry.from_dict(mod_data))
+		ability_modifiers.append(AbilityModifierEntry.from_dict(mod_data))
 
 	effect_grants.clear()
 	for grant_data in data.get("effect_grants", []):
@@ -300,22 +300,22 @@ static func from_simple(data: Dictionary) -> ItemModifierBundle:
 	# Parse flat stat modifiers
 	var stats_data: Dictionary = data.get("stats", {})
 	for stat_id_str in stats_data:
-		var mod := StatModifierEntry.create(
+		var mod := AbilityModifierEntry.create(
 			StringName(stat_id_str),
 			int(stats_data[stat_id_str]),
 			false
 		)
-		bundle.stat_modifiers.append(mod)
+		bundle.ability_modifiers.append(mod)
 
 	# Parse percentage stat modifiers
 	var stats_pct_data: Dictionary = data.get("stats_percent", {})
 	for stat_id_str in stats_pct_data:
-		var mod := StatModifierEntry.create(
+		var mod := AbilityModifierEntry.create(
 			StringName(stat_id_str),
 			int(stats_pct_data[stat_id_str]),
 			true
 		)
-		bundle.stat_modifiers.append(mod)
+		bundle.ability_modifiers.append(mod)
 
 	# Parse effects (simple string array or full dictionaries)
 	var effects_data: Array = data.get("effects", [])
@@ -340,7 +340,7 @@ static func from_simple(data: Dictionary) -> ItemModifierBundle:
 func _to_string() -> String:
 	var parts: Array[String] = []
 
-	for mod in stat_modifiers:
+	for mod in ability_modifiers:
 		parts.append(str(mod))
 
 	for grant in effect_grants:
@@ -357,7 +357,7 @@ func get_tooltip_text() -> String:
 	var lines: Array[String] = []
 
 	# Stat modifiers
-	for mod in stat_modifiers:
+	for mod in ability_modifiers:
 		var op_sign := "+" if mod.amount >= 0 else ""
 		var suffix := "%" if mod.is_percentage else ""
 		var stat_name := String(mod.stat_id).capitalize()
@@ -381,8 +381,8 @@ func get_tooltip_text() -> String:
 
 func print_debug() -> void:
 	print("=== ItemModifierBundle Debug ===")
-	print("  Stat Modifiers (%d):" % stat_modifiers.size())
-	for mod in stat_modifiers:
+	print("  Stat Modifiers (%d):" % ability_modifiers.size())
+	for mod in ability_modifiers:
 		print("    %s" % mod)
 	print("  Effect Grants (%d):" % effect_grants.size())
 	for grant in effect_grants:

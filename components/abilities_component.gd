@@ -4,7 +4,7 @@ extends EntityComponent
 
 
 ## the set of attributes defined by the abilities
-var ability_set: Dictionary[int, AbilityScore] = {}
+var ability_set: Dictionary[StringName, AbilityScore] = {}
 
 ## —————————————————————————————————————————————
 #region Lifecycle wiring: keep parent pointers correct
@@ -28,7 +28,7 @@ func on_removed(_entity: Entity, _em: EntityManager) -> void:
 
 
 ## Adds an ability score.
-func add(ability: int, initial_score: int = 0) -> void:
+func add(ability: StringName, initial_score: int = 0) -> void:
 	var score := AbilityScore.new(self)
 	score.base = initial_score
 	ability_set[ability] = score
@@ -36,14 +36,14 @@ func add(ability: int, initial_score: int = 0) -> void:
 
 
 ## Adds an [AbilityScore] modifier with a specific source.
-func add_source(ability: int, src: StringName, amount: int) -> void:
+func add_source(ability: StringName, src: StringName, amount: int) -> void:
 	var s: AbilityScore = ability_set.get(ability, null)
 	if s != null:
 		s.add_source(src, amount)
 
 
 ## Gets the base value score for a specific [AbilityScore].
-func base_value(ability: int) -> int:
+func base_value(ability: StringName) -> int:
 	var s: AbilityScore = ability_set.get(ability, null)
 	return 0 if s == null else s.base
 
@@ -56,7 +56,7 @@ func clear_all_sources() -> void:
 
 
 ## Clears all modifiers for a specific [AbilityScore]..
-func clear_sources(ability: int) -> void:
+func clear_sources(ability: StringName) -> void:
 	var s: AbilityScore = ability_set.get(ability, null)
 	if s != null:
 		s.clear_sources()
@@ -65,7 +65,7 @@ func clear_sources(ability: int) -> void:
 func from_dict(data: Dictionary) -> void:
 	if not data.has("abilities"):
 		return
-	var ab: Dictionary[int, Dictionary] = data["abilities"]
+	var ab: Dictionary[StringName, Dictionary] = data["abilities"]
 	for a in ab.keys():
 		var slot: = ab[a]
 		var s: AbilityScore = ability_set.get(a, null)
@@ -82,31 +82,31 @@ func from_dict(data: Dictionary) -> void:
 
 
 ## Gets the full score for a specific [AbilityScore].
-func full(ability: int) -> int:
+func full(ability: StringName) -> int:
 	var s: AbilityScore = ability_set.get(ability, null)
 	return 0 if s == null else s.full
 
 
 ## Determines if the [SetOfAbilities] contains a specific ability.
-func has_ability_score(ability: int) -> bool:
+func has_ability_score(ability: StringName) -> bool:
 	return ability_set.has(ability)
 
 
 ## Gets the modifier value score for a specific [AbilityScore].
-func modifier_value(ability: int) -> int:
+func modifier_value(ability: StringName) -> int:
 	var s: AbilityScore = ability_set.get(ability, null)
 	return 0 if s == null else s.modifier
 
 
 ## Removes an [AbilityScore] modifier from a specific source.
-func remove_source(ability: int, src: StringName) -> void:
+func remove_source(ability: StringName, src: StringName) -> void:
 	var s: AbilityScore = ability_set.get(ability, null)
 	if s != null:
 		s.remove_source(src)
 
 
 ## Sets the base score for a specific ability.
-func set_ability_score(ability: int, base_score: int) -> void:
+func set_ability_score(ability: StringName, base_score: int) -> void:
 	var s: AbilityScore = ability_set.get(ability, null)
 	if s == null:
 		add(ability, base_score)
@@ -133,5 +133,5 @@ func to_dict() -> Dictionary:
 
 
 ## Gets an ability's score.
-func value(ability: int) -> AbilityScore:
+func value(ability: StringName) -> AbilityScore:
 	return ability_set.get(ability, null)

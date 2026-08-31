@@ -1,4 +1,4 @@
-class_name StatModifierEntry
+class_name AbilityModifierEntry
 extends Resource
 
 ## Who/what applied this modifier (for removal)
@@ -31,8 +31,8 @@ static func create(
 	p_amount: int,
 	p_is_percentage: bool = false,
 	p_stack_group: StringName = &""
-) -> StatModifierEntry:
-	var entry := StatModifierEntry.new()
+) -> AbilityModifierEntry:
+	var entry := AbilityModifierEntry.new()
 	entry.source_id = p_source
 	entry.amount = p_amount
 	entry.is_percentage = p_is_percentage
@@ -59,8 +59,8 @@ func to_dict() -> Dictionary:
 	}
 
 
-static func from_dict(data: Dictionary) -> StatModifierEntry:
-	var entry := StatModifierEntry.new()
+static func from_dict(data: Dictionary) -> AbilityModifierEntry:
+	var entry := AbilityModifierEntry.new()
 	entry.source_id = StringName(data.get("source_id", ""))
 	entry.amount = int(data.get("amount", 0))
 	entry.is_percentage = bool(data.get("is_percentage", false))
