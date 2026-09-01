@@ -115,8 +115,22 @@ var entrance_values: Dictionary
 ## controls the way the hover animation transition is applied to the interpolation (in the beginning, the end, or both)
 @export var hover_easing: Tween.EaseType
 
+## the name of the shader parameter being adjusted on hover
+@export var hover_shader_parameter: String
+
 ## The dictionary where hover animation property values will be stored
 var hover_values: Dictionary
+
+## close the property group
+@export_group("")
+
+@export_group("Hover Shader Parameter Settings")
+
+## the type of shader parameter being adjusted on hover
+@export var hover_shader_parameter_type: Variant.Type
+
+## the adjustment as a floating-point variable made to the target's shader parameter when hovering
+@export var hover_shader_parameter_float_setting: float
 
 ## close the property group
 @export_group("")
@@ -130,7 +144,7 @@ const IMMEDIATE_TRANSITION: int = Tween.TRANS_LINEAR
 
 func _ready() -> void:
 	target = get_parent()
-	call_deferred("setup")
+	setup.call_deferred()
 
 
 ## Adds a tween animation.
@@ -199,6 +213,21 @@ func setup() -> void:
 		"size": target.size + hover_size,
 		"self_modulate": hover_modulate
 	}
+	if len(hover_shader_parameter) > 0:
+		match hover_shader_parameter_type:
+			Variant.Type.TYPE_FLOAT:
+				hover_values["shader_param"] = hover_shader_parameter
+				hover_values["shader_param_value"] = hover_shader_parameter_float_setting
+
+				# Guard against clobbering a default already captured by the
+				# entrance-shader-parameter block above, if both are in use
+				# on the same node (e.g. entrance fades a value in, then
+				# hover further increases the same parameter — the "default"
+				# to return to on mouse_exited should still be the true
+				# baseline read from the material, captured once).
+				if not default_values.has("shader_param"):
+					default_values["shader_param"] = hover_shader_parameter
+					default_values["shader_param_value"] = target.material.get("shader_parameter/{}".format([hover_shader_parameter], "{}"))
 	target.mouse_entered.connect(add_tween.bind(
 		hover_values,
 		run_parallel_animations,
