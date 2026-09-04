@@ -226,6 +226,7 @@ func get_height_string(use_imperial: bool = false) -> String:
 		return ""
 	if use_imperial:
 		var total_inches := int(float(height_cm) / 2.54)
+		@warning_ignore("integer_division")
 		var feet := total_inches / 12
 		var inches := total_inches % 12
 		return "%d'%d\"" % [feet, inches]
@@ -412,7 +413,7 @@ func from_dict(data: Dictionary) -> void:
 	description = data.get("description", "")
 	short_description = data.get("short_description", "")
 	lore = data.get("lore", "")
-	gender = int(data.get("gender", Gender.Enum.NEUTRAL))
+	gender = data.get("gender", Gender.Enum.NEUTRAL)
 	age = int(data.get("age", 0))
 	height_cm = int(data.get("height_cm", 0))
 	weight_kg = int(data.get("weight_kg", 0))
@@ -444,7 +445,7 @@ func print_debug() -> void:
 	print("  Description: '%s'" % get_short_description(60))
 	print("  Has Lore: %s" % has_lore())
 	print("  Gender: %s (%s)" % [Gender.title(gender), get_pronoun()])
-	print("  Age: %s (%s)" % [age if age > 0 else "?", get_age_category()])
+	print("  Age: %s (%s)" % [str(age) if age > 0 else "?", get_age_category()])
 	print("  Height: %s" % get_height_string())
 	print("  Weight: %s" % get_weight_string())
 	print("  Portrait: %s" % portrait_id)
