@@ -119,7 +119,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	# 2. Overlays top-down (topmost overlay gets first chance)
 	for i in range(scene_stack.size() - 1, -1, -1):
 		var overlay: Node = scene_stack[i].get("node")
-		if _route_input_to_scene(overlay, key_name, phase, event_key):
+		if is_instance_valid(overlay) and _route_input_to_scene(overlay, key_name, phase, event_key):
 			get_viewport().set_input_as_handled()
 			return
 
@@ -128,7 +128,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			return
 
 	# 3. Primary scene last
-	if _route_input_to_scene(primary_scene, key_name, phase, event_key):
+	if is_instance_valid(primary_scene) and _route_input_to_scene(primary_scene, key_name, phase, event_key):
 		get_viewport().set_input_as_handled()
 
 
@@ -139,7 +139,7 @@ func _handle_global_input(_event: InputEventKey, _key_name: String, _phase: Stri
 
 
 func _route_input_to_scene(scene: Node, key_name: String, phase: String, event: InputEventKey) -> bool:
-	if scene == null:
+	if scene == null or not is_instance_valid(scene):
 		return false
 
 	if not scene.has_method("has_action") or not scene.has_method("do_action"):
@@ -188,7 +188,7 @@ func change_scene(scene_name:String, scene_path: String="") -> void:
 	if not scenes.has(scene_name):
 		push_error("Scene '%s' not registered and no path provided." % scene_name)
 		return
-		
+
 	if primary_scene_key == "":
 		primary_scene_key = get_tree().current_scene.name
 
@@ -208,8 +208,24 @@ func change_scene(scene_name:String, scene_path: String="") -> void:
 
 	primary_scene_key = scene_name
 
+	# The old primary_scene is being replaced (and queue_free()'d) by
+	# change_scene_to_file() right above — clear the reference to it now
+	# rather than leaving it dangling until _on_scene_changed() resolves
+	# the new one. That resolution is async (deferred, plus its own
+	# retry-await-loop while waiting for `current_scene is Scene`), and if
+	# the target scene's root has no Scene script at all, that loop can
+	# never succeed — it retries for 5 seconds, then gives up and returns
+	# without ever reassigning primary_scene. Either way, without this,
+	# primary_scene keeps pointing at an instance that's already been
+	# queue_free()'d, and the *next* key press after it's actually deleted
+	# gets routed straight into a freed Object: "Invalid type in function
+	# '_route_input_to_scene'... (previously freed)". Nulling it here means
+	# _unhandled_key_input's is_instance_valid(primary_scene) check simply
+	# skips routing during the gap, instead of crashing on it.
+	primary_scene = null
+
 	# Use call_deferred to ensure scene is ready
-	call_deferred("_on_scene_changed", scene_name)
+	_on_scene_changed.call_deferred(scene_name)
 
 
 func _on_scene_changed(scene_name: String) -> void:
@@ -224,7 +240,7 @@ func _on_scene_changed(scene_name: String) -> void:
 	if candidate == null or not (candidate is Scene):
 		var waited_sec := attempts * _ON_SCENE_CHANGED_RETRY_DELAY_SEC
 		push_error(
-				"GameEngine: current_scene never resolved to a Scene for '%s' after %.2fs (%d attempts)." % [scene_name, waited_sec, attempts]
+			"GameEngine: current_scene never resolved to a Scene for '%s' after %.2fs (%d attempts)." % [scene_name, waited_sec, attempts]
 		)
 		# Diagnostic breadcrumb — if this fires, print what current_scene
 		# actually IS, to distinguish "still null" from "a Node, but the
@@ -233,7 +249,7 @@ func _on_scene_changed(scene_name: String) -> void:
 			push_error("GameEngine: current_scene is still null.")
 		else:
 			push_error(
-					"GameEngine: current_scene is a %s, script=%s — not a Scene." % [candidate.get_class(), str(candidate.get_script())]
+				"GameEngine: current_scene is a %s, script=%s — not a Scene." % [candidate.get_class(), str(candidate.get_script())]
 			)
 		return
 
@@ -345,10 +361,10 @@ func push_scene(scene_name: String, scene_path: String = "", pause_tree: bool = 
 ## Push an overlay that behaves modally: pauses the game, blocks background input,
 ## keeps the overlay processing while paused, and grabs focus.
 func push_modal_scene(
-	scene_name: String,
-	scene_path: String = "",
-	with_scrim: bool = true,
-	scrim_color: Color = Color(0, 0, 0, 0.5)
+		scene_name: String,
+		scene_path: String = "",
+		with_scrim: bool = true,
+		scrim_color: Color = Color(0, 0, 0, 0.5)
 ) -> Node:
 	# Ensure registry entry exists
 	if not _ensure_registered(scene_name, scene_path):
