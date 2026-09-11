@@ -422,6 +422,7 @@ func distribute_gold() -> Dictionary:
 	if member_ids.is_empty() or shared_gold <= 0:
 		return {}
 
+	@warning_ignore("integer_division")
 	var per_member := shared_gold / member_ids.size()
 	var remainder := shared_gold % member_ids.size()
 
