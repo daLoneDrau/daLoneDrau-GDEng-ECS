@@ -259,6 +259,11 @@ func _on_scene_changed(scene_name: String) -> void:
 		print("GameEngine: Set engine on '%s'" % scene_name)
 		primary_scene.set_engine(self)
 
+	# set_engine() must run first — on_enter() implementations (e.g.
+	# CharacterCreationScene) rely on _game_engine already being wired up.
+	if primary_scene:
+		primary_scene.on_enter()
+
 	scene_changed.emit(scene_name, primary_scene)
 	print("GameEngine: Changed to scene '%s'" % scene_name)
 
