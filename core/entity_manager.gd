@@ -65,7 +65,7 @@ func add_entity_immediately(eid: String) -> void:
 			# Call lifecycle hooks on all components
 			_notify_components_added(entity)
 
-			entity_added.emit(entity)
+			entity_added.emit(entity.id)
 			script_event.emit({
 				"source_id": eid,
 				"event_type": ScriptEvent.INITIALIZED,
