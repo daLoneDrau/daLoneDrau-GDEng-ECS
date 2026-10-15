@@ -1,8 +1,8 @@
 @abstract class_name EntityManager
 extends Node
 
-signal entity_added(e: Entity)
-signal entity_removed(eid: String, e: Entity)
+signal entity_added(eid: String)
+signal entity_removed(eid: String)
 signal entity_destroyed(eid: String, e: Entity)
 signal script_event(ctx: Dictionary)
 
@@ -246,7 +246,7 @@ func update() -> void:
 
 		_notify_components_added(entity)
 
-		entity_added.emit(entity)
+		entity_added.emit(entity.id)
 		script_event.emit({
 			"source_id": entity.id,
 			"event_type": ScriptEvent.INITIALIZED,

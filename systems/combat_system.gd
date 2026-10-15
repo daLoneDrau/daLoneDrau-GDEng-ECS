@@ -11,7 +11,7 @@ func attack(attacker_id: String, defender_id: String, args: Dictionary) -> Dicti
 		# successful hit. apply damage
 		var packet: Dictionary = _build_damage_packet(attacker_id, defender_id, hit, args)
 		var parent_scene: Scene = get_parent() as Scene
-		var damage_system: DamageSystem = parent_scene.get_damage_system()
+		var damage_system: DamageSystem = parent_scene.get_registered_system("DamageSystem")
 		var result: Dictionary = damage_system.apply_damage(defender_id, packet)
 		hit.damage_result = result
 	
