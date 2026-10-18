@@ -112,7 +112,7 @@ func get_scene_entities() -> Array[Entity]:
 
 ## Convenience: Get the player entity
 func get_player() -> Entity:
-	var players := _game_engine.entity_manager.get_entities_by_tag(PlayerTags.Tag.PC)
+	var players := _game_engine.entity_manager.get_entities_by_tag(EntityTags.Tag.PC)
 	if players.size() > 0:
 		return players[0]
 	return null
