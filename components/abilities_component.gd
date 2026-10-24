@@ -116,7 +116,7 @@ func set_ability_score(ability: StringName, base_score: int) -> void:
 
 
 func to_dict() -> Dictionary:
-	var out: Dictionary[int, Dictionary] = {}
+	var out: Dictionary[StringName, Dictionary] = {}
 	for a in ability_set.keys():
 		var s: AbilityScore = ability_set[a]
 		if s == null:
