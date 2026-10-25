@@ -1,6 +1,9 @@
 class_name AbilityModifierEntry
 extends Resource
 
+## The ability or stat this modifier changes (for example &"arm" or &"str")
+var stat_id: StringName = &""
+
 ## Who/what applied this modifier (for removal)
 var source_id: StringName = &""
 
@@ -27,12 +30,14 @@ var description: String = ""
 
 
 static func create(
-	p_source: StringName,
-	p_amount: int,
-	p_is_percentage: bool = false,
-	p_stack_group: StringName = &""
+		p_stat_id: StringName,
+		p_amount: int,
+		p_is_percentage: bool = false,
+		p_source: StringName = &"",
+		p_stack_group: StringName = &""
 ) -> AbilityModifierEntry:
 	var entry := AbilityModifierEntry.new()
+	entry.stat_id = p_stat_id
 	entry.source_id = p_source
 	entry.amount = p_amount
 	entry.is_percentage = p_is_percentage
@@ -43,11 +48,12 @@ static func create(
 func _to_string() -> String:
 	var suffix := "%" if is_percentage else ""
 	var op_sign := "+" if amount >= 0 else ""
-	return "%s%d%s from %s" % [op_sign, amount, suffix, source_id]
+	return "%s%d%s %s from %s" % [op_sign, amount, suffix, stat_id, source_id]
 
 
 func to_dict() -> Dictionary:
 	return {
+		"stat_id": String(stat_id),
 		"source_id": String(source_id),
 		"amount": amount,
 		"is_percentage": is_percentage,
@@ -56,11 +62,12 @@ func to_dict() -> Dictionary:
 		"icon_id": String(icon_id),
 		"duration_type": duration_type,
 		"description": description,
-	}
+		}
 
 
 static func from_dict(data: Dictionary) -> AbilityModifierEntry:
 	var entry := AbilityModifierEntry.new()
+	entry.stat_id = StringName(data.get("stat_id", ""))
 	entry.source_id = StringName(data.get("source_id", ""))
 	entry.amount = int(data.get("amount", 0))
 	entry.is_percentage = bool(data.get("is_percentage", false))
