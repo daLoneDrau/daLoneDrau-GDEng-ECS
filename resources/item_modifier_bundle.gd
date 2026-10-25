@@ -108,7 +108,7 @@ func meets_requirements(entity: Entity) -> bool:
 	for ability_id_str in requirements:
 		var ability_id := StringName(ability_id_str)
 		var required_value: int = int(requirements[ability_id_str])
-		var current_value := abilities.value(ability_id).full
+		var current_value := abilities.full(ability_id)
 
 		if current_value < required_value:
 			return false
@@ -131,7 +131,7 @@ func get_unmet_requirements(entity: Entity) -> Array[Dictionary]:
 		var current_value := 0
 
 		if abilities:
-			current_value = abilities.get_value(ability_id, 0)
+			current_value = abilities.full(ability_id)
 
 		if current_value < required_value:
 			unmet.append({
@@ -151,7 +151,7 @@ func get_unmet_requirements(entity: Entity) -> Array[Dictionary]:
 ## Check if this bundle modifies a specific stat
 func modifies_stat(ability_id: StringName) -> bool:
 	for mod in ability_modifiers:
-		if mod.ability_id == ability_id:
+		if mod.stat_id == ability_id:
 			return true
 	return false
 
@@ -229,8 +229,8 @@ func merge(other: ItemModifierBundle) -> ItemModifierBundle:
 	for key in other.requirements:
 		if merged.requirements.has(key):
 			merged.requirements[key] = maxi(
-				int(merged.requirements[key]),
-				int(other.requirements[key])
+					int(merged.requirements[key]),
+					int(other.requirements[key])
 			)
 		else:
 			merged.requirements[key] = other.requirements[key]
@@ -271,7 +271,7 @@ func to_dict() -> Dictionary:
 		"stat_modifiers": mods_data,
 		"effect_grants": grants_data,
 		"requirements": requirements,
-	}
+		}
 
 
 func from_dict(data: Dictionary) -> void:
@@ -301,9 +301,9 @@ static func from_simple(data: Dictionary) -> ItemModifierBundle:
 	var stats_data: Dictionary = data.get("stats", {})
 	for stat_id_str in stats_data:
 		var mod := AbilityModifierEntry.create(
-			StringName(stat_id_str),
-			int(stats_data[stat_id_str]),
-			false
+				StringName(stat_id_str),
+				int(stats_data[stat_id_str]),
+				false
 		)
 		bundle.ability_modifiers.append(mod)
 
@@ -311,9 +311,9 @@ static func from_simple(data: Dictionary) -> ItemModifierBundle:
 	var stats_pct_data: Dictionary = data.get("stats_percent", {})
 	for stat_id_str in stats_pct_data:
 		var mod := AbilityModifierEntry.create(
-			StringName(stat_id_str),
-			int(stats_pct_data[stat_id_str]),
-			true
+				StringName(stat_id_str),
+				int(stats_pct_data[stat_id_str]),
+				true
 		)
 		bundle.ability_modifiers.append(mod)
 
