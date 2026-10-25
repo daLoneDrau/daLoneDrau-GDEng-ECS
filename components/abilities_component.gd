@@ -19,7 +19,7 @@ func on_removed(_entity: Entity, _em: EntityManager) -> void:
 	for a in ability_set.keys():
 		if ability_set[a] != null:
 			ability_set[a]._parent = null
-			
+
 #endregion
 
 ## —————————————————————————————————————————————
@@ -33,6 +33,23 @@ func add(ability: StringName, initial_score: int = 0) -> void:
 	score.base = initial_score
 	ability_set[ability] = score
 	emit_update_signal()
+
+
+## Adds an [AbilityScore] modifier from an [AbilityModifierEntry], keyed by the entry's source_id.
+## A percentage entry is converted to a flat amount from the ability's base value at the time it
+## is added, so it does not follow later changes to the base. The entry's stack_group is not
+## enforced here. An entry with the same source on the same ability replaces the earlier one,
+## which makes re-applying an entry safe but means a source holds one amount per ability.
+func add_modifier_entry(ability: StringName, entry: AbilityModifierEntry) -> void:
+	if entry == null:
+		return
+	var s: AbilityScore = ability_set.get(ability, null)
+	if s == null:
+		return
+	var amount: int = entry.amount
+	if entry.is_percentage:
+		amount = int(round(s.base * (float(entry.amount) / 100.0)))
+	s.add_source(entry.source_id, amount)
 
 
 ## Adds an [AbilityScore] modifier with a specific source.
@@ -98,6 +115,13 @@ func modifier_value(ability: StringName) -> int:
 	return 0 if s == null else s.modifier
 
 
+## Removes every modifier from a source (such as an item's entity id) across all abilities.
+func remove_modifiers_from_source(src: StringName) -> void:
+	for s: AbilityScore in ability_set.values():
+		if s != null:
+			s.remove_source(src)
+
+
 ## Removes an [AbilityScore] modifier from a specific source.
 func remove_source(ability: StringName, src: StringName) -> void:
 	var s: AbilityScore = ability_set.get(ability, null)
@@ -112,7 +136,7 @@ func set_ability_score(ability: StringName, base_score: int) -> void:
 		add(ability, base_score)
 	else:
 		s.base = base_score
-		# AbilityScore will call parent.emit_update_signal() for us
+# AbilityScore will call parent.emit_update_signal() for us
 
 
 func to_dict() -> Dictionary:
